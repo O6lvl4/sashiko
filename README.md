@@ -1,10 +1,47 @@
 # Sashiko
 
-> **The first Ruby library that emits OpenTelemetry spans from inside a Ractor.**
-> Plus: declarative tracing, cross-boundary context propagation, Ruby::Box isolation.
-> Built from the ground up for Ruby 4.
+> Declarative OpenTelemetry for Ruby 4 — with first-class support for
+> **Ractor span emission**, **Ruby::Box multi-tenancy**, and **distributed
+> boundary propagation**.
 
-📖 **API docs**: <https://o6lvl4.github.io/sashiko/>
+[![Test](https://github.com/O6lvl4/sashiko/actions/workflows/test.yml/badge.svg)](https://github.com/O6lvl4/sashiko/actions/workflows/test.yml)
+[![Typecheck](https://github.com/O6lvl4/sashiko/actions/workflows/typecheck.yml/badge.svg)](https://github.com/O6lvl4/sashiko/actions/workflows/typecheck.yml)
+[![Docs](https://github.com/O6lvl4/sashiko/actions/workflows/docs.yml/badge.svg)](https://o6lvl4.github.io/sashiko/)
+
+**API docs**: <https://o6lvl4.github.io/sashiko/>
+
+## Why Sashiko
+
+- **World-first: emit OpenTelemetry spans from inside a Ractor.** Vanilla
+  OTel Ruby can't do this — the SDK's module state is not Ractor-shareable.
+  Sashiko records spans as frozen `SpanEvent` data inside the Ractor and
+  **replays them as real OTel spans on the main Ractor** with original
+  timing and parent linkage. See [the Ractor story](#wait-ractors-cant-emit-otel-spans).
+
+- **Cross-boundary trace propagation.** `Sashiko::Context.carrier` returns
+  a deep-frozen, Ractor-shareable Hash of W3C Trace Context headers that
+  survives **Thread, Fiber, Sidekiq queue args, Kafka message attributes,
+  HTTP headers, and `Ractor.new` arguments**. Reconnect the trace on the
+  other side with one `attach` call.
+
+- **Multi-tenant observability via Ruby::Box.** `Sashiko::Box.new_with_sashiko`
+  gives each tenant its own Sashiko, its own OTel tracer provider, its own
+  exporter, and its own instrumented classes — **zero cross-contamination**,
+  all in one process. Full suite runs under `RUBY_BOX=1` in CI.
+
+- **Declarative tracing DSL.** `extend Sashiko::Traced; trace :method_name`
+  replaces `tracer.in_span { ... }` blocks. Exceptions, error status, and
+  attribute procs are handled automatically. Also: `trace_all matching: /regex/`.
+
+- **Ruby 4 native, not decorative.** Built on `Ractor::Port`, `Ruby::Box`,
+  `Data.define`, pattern matching, endless methods, `it` block parameter,
+  `Ractor.make_shareable`, anonymous block forwarding — each applied where
+  it clarifies the code, not for show. Ships RBS signatures, type-checked
+  in CI with Steep.
+
+- **Documented with diagrams, verified with tests, published as a docs
+  site.** 32 tests green in both modes, 0 type errors, 3 Mermaid diagrams
+  rendered via premaid, RDoc auto-deployed to GitHub Pages on every push.
 
 ## Wait, Ractors can't emit OTel spans
 
