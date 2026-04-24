@@ -61,6 +61,22 @@ class CarrierTest < Minitest::Test
     assert_equal original_trace_id, worker.trace_id
   end
 
+  # Ruby 4 specific: the carrier is Ractor-shareable by construction
+  # (Hash<String,String>), so it crosses a Ractor boundary without any
+  # explicit make_shareable. This is the one piece of Sashiko that is
+  # genuinely Ractor-native today — span emission inside a Ractor is
+  # blocked upstream by OTel SDK's non-shareable module state.
+  def test_carrier_crosses_ractor_boundary
+    tracer = Sashiko.tracer
+    sent   = nil
+
+    tracer.in_span("producer") { sent = Sashiko::Context.carrier }
+
+    assert Ractor.shareable?(sent), "carrier must be Ractor-shareable"
+    r = Ractor.new(sent) { |received| received }
+    assert_equal sent, r.value, "carrier survives Ractor round-trip intact"
+  end
+
   def test_empty_carrier_yields_fresh_root_trace
     tracer = Sashiko.tracer
     Sashiko::Context.attach({}) do

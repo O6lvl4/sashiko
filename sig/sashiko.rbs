@@ -1,0 +1,66 @@
+module Sashiko
+  VERSION: String
+  DEFAULT_TRACER_NAME: String
+
+  def self.tracer: () -> untyped
+  def self.tracer=: (untyped) -> untyped
+
+  module Traced
+    # Frozen Data value holding a single traced method's config.
+    class Options < Data
+      attr_reader span_name: String
+      attr_reader kind: Symbol
+      attr_reader attributes: (Proc | Hash[String | Symbol, untyped] | nil)
+      attr_reader record_args: bool
+      attr_reader method_name: Symbol
+      attr_reader class_name: String?
+
+      def self.new: (span_name: String, kind: Symbol, attributes: untyped, record_args: bool, method_name: Symbol, class_name: String?) -> Options
+    end
+
+    def trace: (Symbol | String method_name, ?name: String?, ?kind: Symbol, ?attributes: untyped, ?record_args: bool) -> void
+    def trace_all: (matching: Regexp, ?kind: Symbol, ?record_args: bool) -> void
+
+    def self.overlay_for: (Class klass) -> Module
+    def self.install_overlay: (Class klass) -> Module
+    def self.weave: (Module overlay, Options options) -> void
+    def self.build_attributes: (Array[untyped] args, Hash[Symbol, untyped] kwargs, Options options) -> Hash[String, untyped]
+  end
+
+  module Context
+    def self.current: () -> untyped
+    def self.with: [T] (untyped context) { () -> T } -> T
+    def self.thread: () { () -> void } -> Thread
+    def self.fiber: () { () -> void } -> Fiber
+    def self.parallel_map: [I, O] (Array[I] | _Each[I] enumerable) { (I) -> O } -> Array[O]
+    def self.carrier: () -> Hash[String, String]
+    def self.attach: [T] (Hash[String, String] carrier) { () -> T } -> T
+  end
+
+  module Adapters
+    module Anthropic
+      class Price < Data
+        attr_reader input: Float
+        attr_reader output: Float
+        attr_reader cache_write: Float
+        attr_reader cache_read: Float
+
+        def self.new: (input: Float, output: Float, cache_write: Float, cache_read: Float) -> Price
+      end
+
+      DEFAULT_PRICING: Hash[String, Price]
+
+      def self.pricing: () -> Hash[String, Price]
+      def self.pricing=: (Hash[String, Price]) -> Hash[String, Price]
+      def self.instrument!: (Class messages_class) -> Class?
+      def self.record_response: (untyped span, Hash[Symbol | String, untyped] response) -> void
+    end
+
+    module Faraday
+      class Middleware
+        def initialize: (untyped app) -> void
+        def call: (untyped env) -> untyped
+      end
+    end
+  end
+end

@@ -11,10 +11,8 @@ module Sashiko
   DEFAULT_TRACER_NAME = "sashiko"
 
   class << self
-    def tracer
-      @tracer ||= OpenTelemetry.tracer_provider.tracer(DEFAULT_TRACER_NAME, VERSION)
-    end
-
     attr_writer :tracer
+
+    def tracer = @tracer ||= OpenTelemetry.tracer_provider.tracer(DEFAULT_TRACER_NAME, VERSION)
   end
 end

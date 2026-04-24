@@ -9,73 +9,72 @@ module Sashiko
   #     def process(order); ...; end
   #   end
   module Traced
+    # Immutable trace configuration for a single method. Frozen Data value,
+    # Ractor-shareable — the overlay's closure captures this record instead
+    # of an ad-hoc bag of locals.
+    Options = Data.define(:span_name, :kind, :attributes, :record_args, :method_name, :class_name)
+
     def trace(method_name, name: nil, kind: :internal, attributes: nil, record_args: false)
-      method_name = method_name.to_sym
-      span_name = name || "#{self.name || "anon"}##{method_name}"
-      overlay = Traced.overlay_for(self)
-      Traced.define_wrapper(overlay, method_name, span_name, kind, attributes, record_args, self.name)
+      options = Options.new(
+        span_name: name || "#{self.name || "anon"}##{method_name}",
+        kind:,
+        attributes:,
+        record_args:,
+        method_name: method_name.to_sym,
+        class_name: self.name,
+      )
+      Traced.weave(Traced.overlay_for(self), options)
     end
 
-    # Trace every instance method matching `pattern` that's currently
-    # defined on this class. Only matches methods defined ON this class
-    # (not inherited), and skips those already on the sashiko overlay.
-    #   trace_all matching: /^handle_/
-    #   trace_all matching: /./, kind: :internal
+    # Trace every instance method matching `pattern` defined ON this class.
+    # Must be called AFTER the method defs so they are visible to
+    # instance_methods(false).
     def trace_all(matching:, kind: :internal, record_args: false)
       overlay = Traced.overlay_for(self)
-      instance_methods(false).each do |m|
-        next unless m.to_s.match?(matching)
-        next if overlay.instance_methods(false).include?(m)
-        trace(m, kind: kind, record_args: record_args)
-      end
+      instance_methods(false)
+        .select { it.to_s.match?(matching) }
+        .reject { overlay.instance_methods(false).include?(it) }
+        .each   { trace(it, kind:, record_args:) }
     end
 
     class << self
       # One prepended module per target class; we redefine on top of it when
       # the same method is re-traced. This keeps super chains intact.
-      def overlay_for(klass)
-        klass.instance_variable_get(:@__sashiko_overlay) || begin
-          overlay = Module.new
-          klass.prepend(overlay)
-          klass.instance_variable_set(:@__sashiko_overlay, overlay)
-          overlay
+      def overlay_for(klass) = klass.instance_variable_get(:@__sashiko_overlay) || install_overlay(klass)
+
+      def install_overlay(klass)
+        Module.new.tap do |m|
+          klass.prepend(m)
+          klass.instance_variable_set(:@__sashiko_overlay, m)
         end
       end
 
-      def define_wrapper(overlay, method_name, span_name, kind, attributes_fn, record_args, class_name)
-        overlay.define_method(method_name) do |*args, **kwargs, &block|
-          tracer = Sashiko.tracer
-          attrs = Traced.build_attributes(self, args, kwargs, attributes_fn, record_args, method_name, class_name)
-          tracer.in_span(span_name, attributes: attrs, kind: kind) do |span|
-            begin
-              super(*args, **kwargs, &block)
-            rescue => e
-              span.record_exception(e)
-              span.status = OpenTelemetry::Trace::Status.error(e.message)
-              raise
-            end
+      def weave(overlay, options)
+        overlay.define_method(options.method_name) do |*args, **kwargs, &block|
+          attrs = Traced.build_attributes(args, kwargs, options)
+          Sashiko.tracer.in_span(options.span_name, attributes: attrs, kind: options.kind) do |span|
+            super(*args, **kwargs, &block)
+          rescue => e
+            span.record_exception(e)
+            span.status = OpenTelemetry::Trace::Status.error(e.message)
+            raise
           end
         end
       end
 
-      def build_attributes(receiver, args, kwargs, attributes_fn, record_args, method_name, class_name)
-        result = { "code.function" => method_name.to_s }
-        result["code.namespace"] = class_name if class_name
-        if record_args
-          result["code.args.count"] = args.length + kwargs.length
-        end
-        case attributes_fn
-        when Proc
-          extra = attributes_fn.arity.zero? ? receiver.instance_exec(&attributes_fn) : attributes_fn.call(*args, **kwargs)
-          result.merge!(stringify_keys(extra)) if extra.is_a?(Hash)
-        when Hash
-          result.merge!(stringify_keys(attributes_fn))
-        end
-        result
-      end
+      def build_attributes(args, kwargs, options)
+        attrs = { "code.function" => options.method_name.to_s }
+        attrs["code.namespace"]  = options.class_name if options.class_name
+        attrs["code.args.count"] = args.length + kwargs.length if options.record_args
 
-      def stringify_keys(hash)
-        hash.each_with_object({}) { |(k, v), h| h[k.to_s] = v }
+        extra = case options.attributes
+                in Proc => fn then fn.arity.zero? ? fn.call : fn.call(*args, **kwargs)
+                in Hash => h  then h
+                else nil
+                end
+
+        extra&.each { |k, v| attrs[k.to_s] = v }
+        attrs
       end
     end
   end

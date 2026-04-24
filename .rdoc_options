@@ -1,0 +1,8 @@
+---
+charset: UTF-8
+encoding: UTF-8
+title: Sashiko — Declarative OpenTelemetry for Ruby 4
+main_page: README.md
+markup: markdown
+template: darkfish
+visibility: :public

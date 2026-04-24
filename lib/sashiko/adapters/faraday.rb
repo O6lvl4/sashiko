@@ -10,12 +10,9 @@ module Sashiko
     # Attribute names follow OTel HTTP semantic conventions (stable).
     module Faraday
       class Middleware
-        def initialize(app)
-          @app = app
-        end
+        def initialize(app) = (@app = app)
 
         def call(env)
-          tracer = Sashiko.tracer
           method = env.method.to_s.upcase
           url    = env.url
           attrs = {
@@ -24,19 +21,22 @@ module Sashiko
             "server.address"      => url.host,
             "server.port"         => url.port,
           }
-          tracer.in_span("HTTP #{method}", attributes: attrs, kind: :client) do |span|
-            begin
-              response = @app.call(env)
-              span.set_attribute("http.response.status_code", response.status)
-              if response.status >= 400
-                span.status = OpenTelemetry::Trace::Status.error("HTTP #{response.status}")
-              end
-              response
-            rescue => e
-              span.record_exception(e)
-              span.status = OpenTelemetry::Trace::Status.error(e.message)
-              raise
+
+          Sashiko.tracer.in_span("HTTP #{method}", attributes: attrs, kind: :client) do |span|
+            response = @app.call(env)
+            span.set_attribute("http.response.status_code", response.status)
+
+            case response.status
+            in 100..399 # ok, no-op
+            in Integer => code
+              span.status = OpenTelemetry::Trace::Status.error("HTTP #{code}")
             end
+
+            response
+          rescue => e
+            span.record_exception(e)
+            span.status = OpenTelemetry::Trace::Status.error(e.message)
+            raise
           end
         end
       end

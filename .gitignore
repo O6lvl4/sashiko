@@ -3,5 +3,7 @@
 /vendor/bundle/
 /pkg/
 /tmp/
+/doc/
+/.yardoc/
 *.gem
 .DS_Store
