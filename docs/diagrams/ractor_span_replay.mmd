@@ -1,0 +1,19 @@
+sequenceDiagram
+    autonumber
+    participant M as Main Ractor<br/>(OTel SDK + tracer)
+    participant P as Ractor::Port
+    participant W as Worker Ractor<br/>(no OTel access)
+    participant S as Sashiko::Ractor::Sink
+
+    Note over M: tracer.in_span("main.batch") opens
+    M->>+W: Ractor.new(port, receiver, method, item, carrier)
+    Note over W: "cannot call tracer.in_span"<br/>"(OTel state is unshareable)"
+    W->>W: Sashiko::Ractor.span("work")<br/>records frozen SpanEvent
+    W->>W: nested Sashiko::Ractor.span("phase")<br/>records child SpanEvent
+    W-)P: port.send [idx, result, [events]]
+    P-)M: receive [idx, result, events]
+    deactivate W
+    M->>+S: Sink.replay(events, parent_carrier)
+    Note over S: for each event:<br/>tracer.start_span(name, start_timestamp)<br/>span.finish(end_timestamp)<br/>parent resolved from carrier or prior span
+    S-->>-M: real OTel spans emitted<br/>with original timing + correct parent
+    Note over M: exporter sees unified trace:<br/>main.batch → work → phase

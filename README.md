@@ -21,6 +21,28 @@ real OTel spans with the original timestamps and correct parent
 linkage. From the trace consumer's point of view, the spans look
 exactly as if they were emitted inside the Ractor.
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant M as Main Ractor<br/>(OTel SDK + tracer)
+    participant P as Ractor::Port
+    participant W as Worker Ractor<br/>(no OTel access)
+    participant S as Sashiko::Ractor::Sink
+
+    Note over M: tracer.in_span("main.batch") opens
+    M->>+W: Ractor.new(port, receiver, method, item, carrier)
+    Note over W: "cannot call tracer.in_span"<br/>"(OTel state is unshareable)"
+    W->>W: Sashiko::Ractor.span("work")<br/>records frozen SpanEvent
+    W->>W: nested Sashiko::Ractor.span("phase")<br/>records child SpanEvent
+    W-)P: port.send [idx, result, [events]]
+    P-)M: receive [idx, result, events]
+    deactivate W
+    M->>+S: Sink.replay(events, parent_carrier)
+    Note over S: for each event:<br/>tracer.start_span(name, start_timestamp)<br/>span.finish(end_timestamp)<br/>parent resolved from carrier or prior span
+    S-->>-M: real OTel spans emitted<br/>with original timing + correct parent
+    Note over M: exporter sees unified trace:<br/>main.batch → work → phase
+```
+
 ```
 main.batch (20ms)                              ← main Ractor
 ├─ PrimePipeline.run (7.5ms) [item.index=0]    ← ← ← emitted "inside" a Ractor
@@ -291,6 +313,34 @@ Sidekiq job args, Kafka message attributes, HTTP headers, **and
 `Ractor.new(...)` arguments**. The worker's spans end up in the same
 distributed trace as the producer's.
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant W as Web (Rails)<br/>Sashiko::Traced
+    participant Q as Sidekiq Queue<br/>(Redis)
+    participant S as Sidekiq Worker<br/>Sashiko::Traced
+    participant E as External API<br/>Sashiko::Adapters::Faraday
+
+    B->>+W: POST /orders
+    Note over W: tracer.in_span("process_order")<br/>trace_id = T
+
+    W->>W: Sashiko::Context.carrier<br/>=> { "traceparent" => "00-T-..." }
+
+    W->>+Q: perform_async(order_id, carrier)
+    W-->>-B: 201 Created
+
+    Q->>+S: pop job with [order_id, carrier]
+    Note over S: Sashiko::Context.attach(carrier) do<br/>  ... traced work ...<br/>end
+
+    Note over S: spans now emit under trace_id = T
+    S->>+E: HTTP POST /ship<br/>(Faraday middleware<br/>adds child span)
+    E-->>-S: 200 OK
+    deactivate S
+
+    Note over B,E: In Jaeger / Honeycomb:<br/>single trace T containing<br/>POST /orders → Worker → HTTP POST /ship
+```
+
 ## Adapters (optional)
 
 Adapters are not loaded by default — require them explicitly. Adapters
@@ -339,6 +389,45 @@ instrumentation is process-global — once you patch `Anthropic::Messages`
 for tenant A, tenant B inherits the patch too. Box breaks that
 assumption: requires, class definitions, OTel SDKs, and Sashiko itself
 live independently inside each Box.
+
+```mermaid
+flowchart TB
+    subgraph process["one Ruby process (RUBY_BOX=1)"]
+        direction LR
+
+        subgraph main["Main"]
+            MainApp["main app code<br/>(no Anthropic,<br/>no instrumentation)"]
+        end
+
+        subgraph boxA["Ruby::Box — tenant-A"]
+            SashikoA["Sashiko (copy A)"]
+            OtelA["OTel tracer provider A"]
+            ExporterA["Exporter A<br/>(Jaeger)"]
+            AnthropicA["Anthropic::Messages<br/>instrumented (copy A)"]
+            SashikoA --> OtelA
+            OtelA --> ExporterA
+            AnthropicA --> OtelA
+        end
+
+        subgraph boxB["Ruby::Box — tenant-B"]
+            SashikoB["Sashiko (copy B)"]
+            OtelB["OTel tracer provider B"]
+            ExporterB["Exporter B<br/>(Honeycomb)"]
+            AnthropicB["Anthropic::Messages<br/>instrumented (copy B)"]
+            SashikoB --> OtelB
+            OtelB --> ExporterB
+            AnthropicB --> OtelB
+        end
+    end
+
+    boxA -.->|"isolated"| boxB
+    main -.->|"isolated"| boxA
+    main -.->|"isolated"| boxB
+
+    style boxA fill:#eef6ff,stroke:#3b82f6
+    style boxB fill:#fff4ec,stroke:#f97316
+    style main fill:#f4f4f5,stroke:#71717a
+```
 
 ```ruby
 # Enable with: RUBY_BOX=1 bundle exec ruby your_script.rb

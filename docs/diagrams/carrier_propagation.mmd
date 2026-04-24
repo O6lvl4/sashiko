@@ -1,0 +1,25 @@
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant W as Web (Rails)<br/>Sashiko::Traced
+    participant Q as Sidekiq Queue<br/>(Redis)
+    participant S as Sidekiq Worker<br/>Sashiko::Traced
+    participant E as External API<br/>Sashiko::Adapters::Faraday
+
+    B->>+W: POST /orders
+    Note over W: tracer.in_span("process_order")<br/>trace_id = T
+
+    W->>W: Sashiko::Context.carrier<br/>=> { "traceparent" => "00-T-..." }
+
+    W->>+Q: perform_async(order_id, carrier)
+    W-->>-B: 201 Created
+
+    Q->>+S: pop job with [order_id, carrier]
+    Note over S: Sashiko::Context.attach(carrier) do<br/>  ... traced work ...<br/>end
+
+    Note over S: spans now emit under trace_id = T
+    S->>+E: HTTP POST /ship<br/>(Faraday middleware<br/>adds child span)
+    E-->>-S: 200 OK
+    deactivate S
+
+    Note over B,E: In Jaeger / Honeycomb:<br/>single trace T containing<br/>POST /orders → Worker → HTTP POST /ship

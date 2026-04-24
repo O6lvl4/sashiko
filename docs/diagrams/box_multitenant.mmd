@@ -1,0 +1,39 @@
+flowchart TB
+    subgraph process["one Ruby process (RUBY_BOX=1)"]
+        direction LR
+
+        subgraph main["Main"]
+            MainApp["main app code<br/>(no Anthropic,<br/>no instrumentation)"]
+        end
+
+        subgraph boxA["Ruby::Box — tenant-A"]
+            SashikoA["Sashiko (copy A)"]
+            OtelA["OTel tracer provider A"]
+            ExporterA["Exporter A<br/>(Jaeger)"]
+            AnthropicA["Anthropic::Messages<br/>instrumented (copy A)"]
+            SashikoA --> OtelA
+            OtelA --> ExporterA
+            AnthropicA --> OtelA
+        end
+
+        subgraph boxB["Ruby::Box — tenant-B"]
+            SashikoB["Sashiko (copy B)"]
+            OtelB["OTel tracer provider B"]
+            ExporterB["Exporter B<br/>(Honeycomb)"]
+            AnthropicB["Anthropic::Messages<br/>instrumented (copy B)"]
+            SashikoB --> OtelB
+            OtelB --> ExporterB
+            AnthropicB --> OtelB
+        end
+    end
+
+    boxA -.->|"isolated"| boxB
+    main -.->|"isolated"| boxA
+    main -.->|"isolated"| boxB
+
+    classDef isolated stroke-dasharray:4 4
+    class boxA,boxB,main isolated
+
+    style boxA fill:#eef6ff,stroke:#3b82f6
+    style boxB fill:#fff4ec,stroke:#f97316
+    style main fill:#f4f4f5,stroke:#71717a
