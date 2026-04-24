@@ -4,6 +4,7 @@ require_relative "sashiko/version"
 require_relative "sashiko/traced"
 require_relative "sashiko/context"
 require_relative "sashiko/ractor"
+require_relative "sashiko/box"
 
 # Adapters are NOT auto-required. Each is a thin optional layer over the core.
 #   require "sashiko/adapters/faraday"

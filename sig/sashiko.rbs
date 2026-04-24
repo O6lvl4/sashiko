@@ -37,6 +37,15 @@ module Sashiko
     def self.attach: [T] (Hash[String, String] carrier) { () -> T } -> T
   end
 
+  module Box
+    class NotEnabledError < StandardError
+    end
+
+    def self.enabled?: () -> bool
+    def self.new: () -> untyped
+    def self.new_with_sashiko: (?lib_path: String) -> untyped
+  end
+
   module Ractor
     class NonShareableReceiverError < ArgumentError
     end

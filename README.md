@@ -88,7 +88,7 @@ Each idiom is applied where it genuinely clarifies the code.
 | Ruby 4.0-new feature | Where it's used in Sashiko |
 |---|---|
 | **`Ractor::Port`** | `Sashiko::Ractor.parallel_map` — true parallel execution across cores using Ruby 4's new Port-based Ractor communication API. See `examples/ractor_demo.rb`. |
-| **`Ruby::Box`** (experimental) | `Sashiko::Adapters::Anthropic.instrument_in_box!` — apply the `prepend` monkey-patch inside a `Ruby::Box`, so the instrumentation does not leak into the main process. CI runs the full test suite under `RUBY_BOX=1` to prove compatibility. |
+| **`Ruby::Box`** (experimental) | `Sashiko::Box.new_with_sashiko` + `Sashiko::Adapters::Anthropic.instrument_in_box!` — multi-tenant observability. Each Box has its own Sashiko, its own OTel tracer provider, its own instrumented classes, its own exporter. Zero cross-contamination. Full test suite runs under `RUBY_BOX=1` in CI. See [`examples/box_multitenant_demo.rb`](examples/box_multitenant_demo.rb). |
 | **ZJIT-friendly design** | All instrumentation happens at class load time via `Module#prepend`; no runtime method rewrites, no `method_added` hooks, no dynamic `define_method` at call time. Inline caches stay warm. |
 | **Ractor 4.0 new API (`Port`, `#value`)** | Used directly rather than the deprecated `.take` / `Ractor.yield` style. |
 
@@ -327,11 +327,64 @@ is stored as a frozen `Data.define(Price)` value, deep-frozen with
 > and the GenAI spec are still moving targets — treat this adapter as
 > a convenience, not a stable contract.
 
-#### Ruby::Box-isolated instrumentation (Ruby 4)
+### `Sashiko::Box` — multi-tenant observability (Ruby 4)
 
-If the process is started with `RUBY_BOX=1`, you can contain the
-prepend-based monkey-patch inside a `Ruby::Box` so the main Ruby
-namespace stays untouched:
+Ruby 4.0 finally shipped `Ruby::Box` after years of discussion. It's
+the other headliner alongside Ractor, and Sashiko leans into it for
+one of the hardest problems in Ruby observability: **multi-tenancy
+inside a single process**.
+
+Because Sashiko (and OTel itself) relies on `Module#prepend`, vanilla
+instrumentation is process-global — once you patch `Anthropic::Messages`
+for tenant A, tenant B inherits the patch too. Box breaks that
+assumption: requires, class definitions, OTel SDKs, and Sashiko itself
+live independently inside each Box.
+
+```ruby
+# Enable with: RUBY_BOX=1 bundle exec ruby your_script.rb
+
+# Two tenants, two OTel exporters, two instrumented class lineages
+tenant_a = Sashiko::Box.new_with_sashiko
+tenant_a.eval(<<~RUBY)
+  OpenTelemetry::SDK.configure { |c| c.service_name = "tenant-a" }
+  # ... tenant-a's business code + instrumentation ...
+RUBY
+
+tenant_b = Sashiko::Box.new_with_sashiko
+tenant_b.eval(<<~RUBY)
+  OpenTelemetry::SDK.configure { |c| c.service_name = "tenant-b" }
+  # ... tenant-b's business code + instrumentation ...
+RUBY
+```
+
+What you get:
+
+| Without Box | With Box |
+|---|---|
+| One global instrumented `Anthropic::Messages` | Each tenant has its own |
+| One OTel tracer provider | Each tenant gets its own |
+| Monkey-patch leaks between tenants | Zero cross-contamination |
+| One exporter destination per process | Every tenant can target a different backend |
+
+See [`examples/box_multitenant_demo.rb`](examples/box_multitenant_demo.rb)
+for a full runnable example. Actual output from that demo:
+
+```
+After running both tenants:
+  tenant-A exporter: 4 span(s)    ← tenant-A data
+  tenant-B exporter: 4 span(s)    ← tenant-B data, zero overlap
+
+Isolation verification:
+  Main process sees Anthropic::Messages class? nil          ← main untouched
+  tenant-A saw Anthropic::Messages instrumented? true
+  tenant-B saw Anthropic::Messages instrumented? true
+  tenant-A response id visible to tenant-B? nil             ← boxes don't cross-see
+```
+
+#### Quick adapter isolation
+
+For the common case of "I only want to instrument a specific library
+inside a specific box," there's a shortcut:
 
 ```ruby
 box = Ruby::Box.new
@@ -340,10 +393,6 @@ Sashiko::Adapters::Anthropic.instrument_in_box!(box, "Anthropic::Messages")
 
 # Main process's Anthropic::Messages (if any) remains unmodified.
 ```
-
-Useful when multiple services share a Ruby process and need independent
-instrumentation lifecycles, or for A/B-testing adapter versions
-side-by-side.
 
 ## A note on Ractors
 
@@ -388,6 +437,9 @@ end
 - [`examples/ractor_span_replay_demo.rb`](examples/ractor_span_replay_demo.rb) —
   the world-first: each Ractor emits its own root + nested spans, all
   reconstructed on the main side as one unified trace tree.
+- [`examples/box_multitenant_demo.rb`](examples/box_multitenant_demo.rb) —
+  two tenants share one Ruby process, each with its own Sashiko, OTel
+  provider, and exporter. Requires `RUBY_BOX=1`.
 
 ```sh
 bundle install
@@ -412,7 +464,7 @@ bundle exec rake docs    # generate RDoc to doc/
 
 ## Status
 
-Early. API may change. 29 tests (plus 1 RUBY_BOX-gated), all passing.
+Early. API may change. 32 tests (4 RUBY_BOX-gated), all passing under both modes.
 
 ## License
 
