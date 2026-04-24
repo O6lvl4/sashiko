@@ -55,7 +55,7 @@ module Sashiko
       def carrier
         h = {}
         OpenTelemetry.propagation.inject(h)
-        Ractor.make_shareable(h)
+        ::Ractor.make_shareable(h)
       end
 
       # Re-attach a context captured via #carrier. Yields with that context

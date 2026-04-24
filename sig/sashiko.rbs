@@ -37,6 +37,13 @@ module Sashiko
     def self.attach: [T] (Hash[String, String] carrier) { () -> T } -> T
   end
 
+  module Ractor
+    class NonShareableReceiverError < ArgumentError
+    end
+
+    def self.parallel_map: [I, O] (Array[I] items, via: Method) -> Array[O]
+  end
+
   module Adapters
     module Anthropic
       class Price < Data
@@ -53,6 +60,7 @@ module Sashiko
       def self.pricing: () -> Hash[String, Price]
       def self.pricing=: (Hash[String, Price]) -> Hash[String, Price]
       def self.instrument!: (Class messages_class) -> Class?
+      def self.instrument_in_box!: (untyped box, String messages_class_name) -> untyped
       def self.record_response: (untyped span, Hash[Symbol | String, untyped] response) -> void
     end
 

@@ -13,7 +13,7 @@ module Sashiko
       # frozen and Ractor-shareable by default.
       Price = Data.define(:input, :output, :cache_write, :cache_read)
 
-      DEFAULT_PRICING = Ractor.make_shareable({
+      DEFAULT_PRICING = ::Ractor.make_shareable({
         "claude-opus-4-7"   => Price.new(input: 15.00, output: 75.00, cache_write: 18.75, cache_read: 1.50),
         "claude-sonnet-4-6" => Price.new(input:  3.00, output: 15.00, cache_write:  3.75, cache_read: 0.30),
         "claude-haiku-4-5"  => Price.new(input:  1.00, output:  5.00, cache_write:  1.25, cache_read: 0.10),
@@ -29,6 +29,29 @@ module Sashiko
           messages_class.prepend(Wrapper)
           messages_class.instance_variable_set(:@__sashiko_instrumented, true)
           messages_class
+        end
+
+        # Ruby 4.0 Ruby::Box variant: apply the prepend only inside the
+        # given Box, so the monkey-patch does NOT leak into the main
+        # Ruby process. Useful when multiple services in the same process
+        # want to instrument Anthropic calls independently, or when you
+        # want to A/B different adapter versions side-by-side.
+        #
+        # Requires the process to be started with RUBY_BOX=1.
+        #
+        #   box = Ruby::Box.new
+        #   box.require "anthropic"
+        #   Sashiko::Adapters::Anthropic.instrument_in_box!(box, "Anthropic::Messages")
+        #
+        #   # Main process's Anthropic::Messages remains untouched.
+        def instrument_in_box!(box, messages_class_name)
+          unless defined?(::Ruby::Box) && ::Ruby::Box.enabled?
+            raise "Ruby::Box is not enabled. Start Ruby with RUBY_BOX=1."
+          end
+          box.eval(<<~RUBY)
+            require "sashiko/adapters/anthropic"
+            Sashiko::Adapters::Anthropic.instrument!(Object.const_get(#{messages_class_name.inspect}))
+          RUBY
         end
 
         def record_response(span, response)
