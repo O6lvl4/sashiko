@@ -24,8 +24,8 @@ module Sashiko
     # Ractor, accessed via Recorder.current (thread-local inside the Ractor).
     class Recorder
       def initialize
-        @events  = []
-        @stack   = []
+        @events  = [] #: Array[SpanEvent]
+        @stack   = [] #: Array[Integer]
         @next_id = 0
       end
 
@@ -59,7 +59,9 @@ module Sashiko
       def self.drain_events!
         r = ::Thread.current[:sashiko_recorder]
         ::Thread.current[:sashiko_recorder] = nil
-        (r ? r.events : []).map { ::Ractor.make_shareable(_1) }.freeze
+        empty = [] #: Array[SpanEvent]
+        events = r ? r.events : empty
+        events.map { ::Ractor.make_shareable(_1) }.freeze
       end
 
       private
@@ -67,7 +69,8 @@ module Sashiko
       def now_ns = Process.clock_gettime(Process::CLOCK_REALTIME, :nanosecond)
 
       def deep_freeze(hash)
-        hash.each_with_object({}) { |(k, v), h| h[k.to_s.freeze] = v.frozen? ? v : v.dup.freeze }.freeze
+        acc = {} #: Hash[String, untyped]
+        hash.each_with_object(acc) { |(k, v), h| h[k.to_s.freeze] = v.frozen? ? v : v.dup.freeze }.freeze
       end
     end
 
@@ -120,7 +123,7 @@ module Sashiko
         end
 
         results = Array.new(items.size)
-        errors  = []
+        errors  = [] #: Array[String]
         ports.size.times do
           idx, value, events, error = ports.shift.receive
           Sink.replay(events, parent_carrier: carrier)
@@ -143,7 +146,7 @@ module Sashiko
         def replay(events, parent_carrier:)
           return if events.empty?
           parent_ctx = OpenTelemetry.propagation.extract(parent_carrier)
-          replayed = {}  # event.id => real OTel span
+          replayed = {} #: Hash[Integer, untyped]
 
           events.sort_by(&:id).each do |event|
             ctx = if event.parent_id.nil?

@@ -7,4 +7,6 @@ group :development do
   gem "rake",     "~> 13.0"
   gem "rdoc",     "~> 6.10"
   gem "faraday",  "~> 2.0"
+  gem "steep",    "~> 1.9"
+  gem "rbs",      "~> 3.10"
 end

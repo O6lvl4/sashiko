@@ -5,12 +5,11 @@ module Sashiko
   def self.tracer: () -> untyped
   def self.tracer=: (untyped) -> untyped
 
-  module Traced
-    # Frozen Data value holding a single traced method's config.
+  module Traced : Module
     class Options < Data
       attr_reader span_name: String
       attr_reader kind: Symbol
-      attr_reader attributes: (Proc | Hash[String | Symbol, untyped] | nil)
+      attr_reader attributes: untyped
       attr_reader record_args: bool
       attr_reader method_name: Symbol
       attr_reader class_name: String?
@@ -18,13 +17,16 @@ module Sashiko
       def self.new: (span_name: String, kind: Symbol, attributes: untyped, record_args: bool, method_name: Symbol, class_name: String?) -> Options
     end
 
+    # When `extend Traced`, the extending class gains these as class methods.
+    # `self` inside trace / trace_all is the class itself.
     def trace: (Symbol | String method_name, ?name: String?, ?kind: Symbol, ?attributes: untyped, ?record_args: bool) -> void
     def trace_all: (matching: Regexp, ?kind: Symbol, ?record_args: bool) -> void
 
-    def self.overlay_for: (Class klass) -> Module
-    def self.install_overlay: (Class klass) -> Module
+    def self.overlay_for: (Module klass) -> Module
+    def self.install_overlay: (Module klass) -> Module
     def self.weave: (Module overlay, Options options) -> void
     def self.build_attributes: (Array[untyped] args, Hash[Symbol, untyped] kwargs, Options options) -> Hash[String, untyped]
+    def self.stringify_keys: (Hash[untyped, untyped]) -> Hash[String, untyped]
   end
 
   module Context
@@ -32,24 +34,60 @@ module Sashiko
     def self.with: [T] (untyped context) { () -> T } -> T
     def self.thread: () { () -> void } -> Thread
     def self.fiber: () { () -> void } -> Fiber
-    def self.parallel_map: [I, O] (Array[I] | _Each[I] enumerable) { (I) -> O } -> Array[O]
+    def self.parallel_map: [I, O] (Array[I] enumerable) { (I) -> O } -> Array[O]
     def self.carrier: () -> Hash[String, String]
     def self.attach: [T] (Hash[String, String] carrier) { () -> T } -> T
   end
 
   module Box
     class NotEnabledError < StandardError
+      def initialize: () -> void
     end
 
     def self.enabled?: () -> bool
     def self.new: () -> untyped
     def self.new_with_sashiko: (?lib_path: String) -> untyped
+    def self.default_lib_path: () -> String
   end
 
   module Ractor
     class NonShareableReceiverError < ArgumentError
     end
 
+    class SpanEvent < Data
+      attr_reader id: Integer
+      attr_reader parent_id: Integer?
+      attr_reader name: String
+      attr_reader kind: Symbol
+      attr_reader attributes: Hash[String, untyped]
+      attr_reader start_ns: Integer
+      attr_reader end_ns: Integer
+      attr_reader status_error: String?
+
+      def self.new: (id: Integer, parent_id: Integer?, name: String, kind: Symbol, attributes: Hash[String, untyped], start_ns: Integer, end_ns: Integer, status_error: String?) -> SpanEvent
+    end
+
+    class Recorder
+      attr_reader events: Array[SpanEvent]
+
+      def initialize: () -> void
+      def span: [T] (String name, ?kind: Symbol, ?attributes: Hash[String | Symbol, untyped]?) { () -> T } -> T
+
+      def self.current: () -> Recorder
+      def self.install: (Recorder) -> Recorder
+      def self.drain_events!: () -> Array[SpanEvent]
+
+      private
+
+      def now_ns: () -> Integer
+      def deep_freeze: (Hash[untyped, untyped]) -> Hash[String, untyped]
+    end
+
+    module Sink
+      def self.replay: (Array[SpanEvent] events, parent_carrier: Hash[String, String]) -> void
+    end
+
+    def self.span: [T] (String name, ?kind: Symbol, ?attributes: Hash[String | Symbol, untyped]?) { () -> T } -> T
     def self.parallel_map: [I, O] (Array[I] items, via: Method) -> Array[O]
   end
 
@@ -66,11 +104,21 @@ module Sashiko
 
       DEFAULT_PRICING: Hash[String, Price]
 
+      module Wrapper
+        def create: (**untyped) -> untyped
+      end
+
       def self.pricing: () -> Hash[String, Price]
       def self.pricing=: (Hash[String, Price]) -> Hash[String, Price]
-      def self.instrument!: (Class messages_class) -> Class?
+      def self.instrument!: (Module messages_class) -> Module?
       def self.instrument_in_box!: (untyped box, String messages_class_name) -> untyped
       def self.record_response: (untyped span, Hash[Symbol | String, untyped] response) -> void
+
+      private
+
+      def self.set_usage_attributes: (untyped span, Hash[Symbol, untyped] usage) -> void
+      def self.set_cost: (untyped span, String? model, Hash[Symbol, untyped] usage) -> void
+      def self.set_cache_hit_ratio: (untyped span, Hash[Symbol, untyped] usage) -> void
     end
 
     module Faraday

@@ -33,7 +33,7 @@ module Sashiko
     end
 
     class << self
-      def enabled? = defined?(::Ruby::Box) && ::Ruby::Box.enabled?
+      def enabled? = !!(defined?(::Ruby::Box) && ::Ruby::Box.enabled?)
 
       # Create a new Ruby::Box. Raises NotEnabledError when not under
       # RUBY_BOX=1 so callers fail fast instead of getting obscure errors.
@@ -58,8 +58,8 @@ module Sashiko
       private
 
       def default_lib_path
-        $LOAD_PATH.find { File.exist?(File.join(_1, "sashiko.rb")) } ||
-          File.expand_path("..", __dir__)
+        found = $LOAD_PATH.find { |p| File.exist?(File.join(p, "sashiko.rb")) }
+        found || File.expand_path("..", __dir__ || ".")
       end
     end
   end

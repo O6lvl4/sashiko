@@ -1,0 +1,40 @@
+# Minimal stubs for external APIs we use.
+# We don't aim to type-check OpenTelemetry / Ruby::Box themselves; we just
+# tell Steep they exist so our own code can reference them.
+
+module OpenTelemetry
+  def self.tracer_provider: () -> untyped
+  def self.propagation: () -> untyped
+
+  module SDK
+    def self.configure: () ?{ (untyped) -> void } -> void
+  end
+
+  module Trace
+    module Status
+      UNSET: Integer
+      OK: Integer
+      ERROR: Integer
+
+      def self.error: (String?) -> untyped
+    end
+
+    def self.context_with_span: (untyped span) -> untyped
+  end
+
+  module Context
+    def self.current: () -> untyped
+    def self.with_current: [T] (untyped context) { () -> T } -> T
+  end
+end
+
+module Ruby
+  class Box
+    def self.enabled?: () -> bool
+    def self.new: () -> Box
+    def eval: (String) -> untyped
+    def require: (String) -> untyped
+    def require_relative: (String) -> untyped
+    def load: (String) -> untyped
+  end
+end

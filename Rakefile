@@ -15,4 +15,9 @@ RDoc::Task.new(:docs) do |r|
   r.rdoc_files.include("lib/**/*.rb", "README.md")
 end
 
-task default: :test
+desc "Run Steep type checker against sig/"
+task :typecheck do
+  sh "bundle exec steep check"
+end
+
+task default: [:test, :typecheck]

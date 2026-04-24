@@ -14,6 +14,7 @@ module Sashiko
     # of an ad-hoc bag of locals.
     Options = Data.define(:span_name, :kind, :attributes, :record_args, :method_name, :class_name)
 
+    # @type self: Module
     def trace(method_name, name: nil, kind: :internal, attributes: nil, record_args: false)
       options = Options.new(
         span_name: name || "#{self.name || "anon"}##{method_name}",
@@ -29,18 +30,19 @@ module Sashiko
     # Trace every instance method matching `pattern` defined ON this class.
     # Must be called AFTER the method defs so they are visible to
     # instance_methods(false).
+    # @type self: Module
     def trace_all(matching:, kind: :internal, record_args: false)
       overlay = Traced.overlay_for(self)
       instance_methods(false)
-        .select { it.to_s.match?(matching) }
-        .reject { overlay.instance_methods(false).include?(it) }
-        .each   { trace(it, kind:, record_args:) }
+        .select { |m| m.to_s.match?(matching) }
+        .reject { |m| overlay.instance_methods(false).include?(m) }
+        .each   { |m| trace(m, kind:, record_args:) }
     end
 
     class << self
       # One prepended module per target class; we redefine on top of it when
       # the same method is re-traced. This keeps super chains intact.
-      def overlay_for(klass) = klass.instance_variable_get(:@__sashiko_overlay) || install_overlay(klass)
+      def overlay_for(klass) = klass.instance_variable_get(:@__sashiko_overlay) || Traced.install_overlay(klass)
 
       def install_overlay(klass)
         Module.new.tap do |m|
@@ -57,13 +59,13 @@ module Sashiko
           rescue => e
             span.record_exception(e)
             span.status = OpenTelemetry::Trace::Status.error(e.message)
-            raise
+            ::Kernel.raise
           end
         end
       end
 
       def build_attributes(args, kwargs, options)
-        attrs = { "code.function" => options.method_name.to_s }
+        attrs = { "code.function" => options.method_name.to_s } #: Hash[String, untyped]
         attrs["code.namespace"]  = options.class_name if options.class_name
         attrs["code.args.count"] = args.length + kwargs.length if options.record_args
 

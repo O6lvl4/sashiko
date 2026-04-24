@@ -53,7 +53,7 @@ module Sashiko
       #   - Ractor.new(...) arguments
       #   - HTTP request headers
       def carrier
-        h = {}
+        h = {} #: Hash[String, String]
         OpenTelemetry.propagation.inject(h)
         ::Ractor.make_shareable(h)
       end

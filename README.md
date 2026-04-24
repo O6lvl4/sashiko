@@ -421,14 +421,27 @@ eventually catches up.
 
 ## Types
 
-`sig/sashiko.rbs` ships with the gem. If you use Steep:
+Sashiko ships RBS signatures (`sig/sashiko.rbs` + `sig/external.rbs`) and
+a `Steepfile`. Type-checking is run as a CI job on every push — the gem
+isn't just "types on the side" but an actively verified typed library.
 
-```yaml
+```sh
+bundle exec rake typecheck
+```
+
+```
+..........
+No type error detected. 🫖
+```
+
+If you embed Sashiko in your own Steep project, add the sig path:
+
+```ruby
 # Steepfile
-target :lib do
-  check "lib"
+target :app do
   signature "sig"
-  library "opentelemetry-sdk"
+  signature "vendor/bundle/ruby/4.0.0/gems/sashiko-*/sig"
+  check "app"
 end
 ```
 

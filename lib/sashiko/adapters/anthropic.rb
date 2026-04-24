@@ -100,6 +100,7 @@ module Sashiko
         end
 
         def set_cost(span, model, usage)
+          return unless model
           price = pricing[model]
           return unless price
 
