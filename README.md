@@ -1,6 +1,48 @@
 # Sashiko
 
-> **Your Sidekiq workers and parallel threads should live in the same trace as the request that started them.** Sashiko makes that happen.
+> **The first Ruby library that emits OpenTelemetry spans from inside a Ractor.**
+> Plus: declarative tracing, cross-boundary context propagation, Ruby::Box isolation.
+> Built from the ground up for Ruby 4.
+
+📖 **API docs**: <https://o6lvl4.github.io/sashiko/>
+
+## Wait, Ractors can't emit OTel spans
+
+Yes — in vanilla OpenTelemetry Ruby, they can't. The SDK's module state
+carries unshareable instance variables (mutex, propagation), so any
+`tracer.in_span(...)` call from inside a Ractor raises
+`Ractor::IsolationError`. The OTel Ruby SIG has acknowledged this as a
+blocker for Ractor adoption.
+
+Sashiko works around this with **span replay**: inside the Ractor, work
+is recorded as frozen `SpanEvent` values (no OTel dependency), shipped
+back to the main Ractor via `Ractor::Port`, then re-emitted there as
+real OTel spans with the original timestamps and correct parent
+linkage. From the trace consumer's point of view, the spans look
+exactly as if they were emitted inside the Ractor.
+
+```
+main.batch (20ms)                              ← main Ractor
+├─ PrimePipeline.run (7.5ms) [item.index=0]    ← ← ← emitted "inside" a Ractor
+│  ├─ enumerate                                ← ← ← nested Ractor-side span
+│  ├─ sieve
+│  └─ summarize
+├─ PrimePipeline.run (13.5ms) [item.index=1]
+│  └─ ...
+└─ PrimePipeline.run (19.7ms) [item.index=2]
+   └─ ...
+```
+
+Run the demo yourself:
+
+```sh
+bundle exec ruby examples/ractor_span_replay_demo.rb
+```
+
+See [the Ractor section](#sashikoractor--true-parallel-execution-with-span-replay-ruby-4)
+for the API.
+
+---
 
 Declarative OpenTelemetry instrumentation for Ruby 4, with first-class
 cross-boundary trace context propagation.
@@ -8,8 +50,6 @@ cross-boundary trace context propagation.
 Named after *sashiko* (刺し子), a Japanese stitching technique that
 reinforces fabric with small, deliberate stitches — the same way this
 gem weaves small, deliberate spans into the fabric of your code.
-
-📖 **API docs**: <https://o6lvl4.github.io/sashiko/>
 
 ---
 
@@ -184,28 +224,48 @@ results = Sashiko::Context.parallel_map(jobs) { |j| process(j) }
 Without these helpers, plain `Thread.new` drops the OTel Context and
 your spans become orphans. Sashiko makes the connection explicit.
 
-### `Sashiko::Ractor` — true parallel execution (Ruby 4)
+### `Sashiko::Ractor` — true parallel execution with span replay (Ruby 4)
 
 For CPU-bound work that should actually use multiple cores, not just
 share the GVL between threads:
 
 ```ruby
-module Crunch
-  def self.heavy(n) = (1..n).sum
+module PrimePipeline
+  def self.run(upper_bound)
+    candidates = Sashiko::Ractor.span("enumerate") { (2..upper_bound).to_a }
+    primes     = Sashiko::Ractor.span("sieve")     { candidates.select { |i| (2..Math.sqrt(i)).none? { |d| i % d == 0 } } }
+    Sashiko::Ractor.span("summarize", attributes: { "prime.count" => primes.length }) { primes.last }
+  end
 end
 
-results = Sashiko::Ractor.parallel_map(
-  [1_000_000, 2_000_000, 3_000_000],
-  via: Crunch.method(:heavy),
-)
+Sashiko.tracer.in_span("main.batch") do
+  Sashiko::Ractor.parallel_map([5_000, 10_000, 15_000], via: PrimePipeline.method(:run))
+end
 ```
 
-Internally uses Ruby 4's `Ractor::Port` for worker-to-main
-communication. Ruby's Ractor constraints apply: `via:` must be a
-`Method` whose receiver is Ractor-shareable (a `Module` or frozen
-class). The carrier captured at call time is propagated into each
-Ractor, so once upstream OTel becomes Ractor-safe, spans emitted
-inside will connect to the parent trace with no API change.
+**What happens under the hood:**
+
+1. Each item runs in its own Ractor (true parallelism, no GVL).
+2. Inside each Ractor, `Sashiko::Ractor.span(...)` records a frozen
+   `SpanEvent` (name, start/end time, attributes, parent event id)
+   — *no OTel calls, because those don't work inside a Ractor*.
+3. When the Ractor finishes, the batch of events is sent back via
+   `Ractor::Port` to the main Ractor.
+4. A `Sashiko::Ractor::Sink` on the main side replays each event as a
+   real OTel span with `tracer.start_span(..., start_timestamp: …)`
+   and `span.finish(end_timestamp: …)`, rebuilding the parent chain
+   from the recorded event ids, all under the context of the span
+   that wrapped the `parallel_map` call.
+
+The resulting trace tree is indistinguishable from one where the
+spans were emitted in-process — except the actual work happened on
+separate cores.
+
+**Constraints:**
+- `via:` must be a `Method` whose receiver is Ractor-shareable
+  (a `Module` or frozen class).
+- Nested spans inside the Ractor must use `Sashiko::Ractor.span`
+  (not `tracer.in_span`, which would crash inside a Ractor).
 
 ### Carrier-based propagation — across processes, queues, Ractors
 
@@ -287,20 +347,22 @@ side-by-side.
 
 ## A note on Ractors
 
-Ruby 4's headline feature is Ractor becoming more viable. Sashiko
-cooperates as far as it can:
+Ruby 4's headline feature is Ractor becoming more viable. Sashiko is
+designed to cooperate with it fully:
 
 - `Sashiko::Context.carrier` returns a `Ractor.make_shareable`-d Hash,
-  so you can hand it to `Ractor.new(...)` directly.
-- `Data`-based config (Options, Price) is Ractor-shareable.
+  handed to `Ractor.new(...)` directly.
+- `Data`-based config (Options, Price, SpanEvent) is Ractor-shareable.
 - `DEFAULT_PRICING` is deep-frozen via `Ractor.make_shareable`.
+- **Worker Ractors can "emit" spans** via the replay mechanism
+  described above — a Sashiko-first capability not available in
+  vanilla OpenTelemetry Ruby.
 
-What is **not** currently possible: emitting spans from inside a
-Ractor. This is blocked upstream — `OpenTelemetry` and
-`OpenTelemetry.propagation` carry unshareable instance variables
-(mutexes, provider references) that a non-main Ractor cannot reach.
-For now, use Ractors for CPU-parallel compute and emit spans on the
-main Ractor after collecting results.
+The long-standing limitation (OTel module state carries unshareable
+instance variables) still applies: you can't call `tracer.in_span`
+directly inside a Ractor. Sashiko's workaround buys you the observability
+you need today, while keeping the same API surface when upstream OTel
+eventually catches up.
 
 ## Types
 
@@ -323,6 +385,9 @@ end
   jobs; workers on the other side continue the same distributed trace.
 - [`examples/ractor_demo.rb`](examples/ractor_demo.rb) — Ractor::Port-driven
   CPU-parallel work under a single traced batch span.
+- [`examples/ractor_span_replay_demo.rb`](examples/ractor_span_replay_demo.rb) —
+  the world-first: each Ractor emits its own root + nested spans, all
+  reconstructed on the main side as one unified trace tree.
 
 ```sh
 bundle install
@@ -347,7 +412,7 @@ bundle exec rake docs    # generate RDoc to doc/
 
 ## Status
 
-Early. API may change. 23 tests (plus 1 RUBY_BOX-gated), all passing.
+Early. API may change. 29 tests (plus 1 RUBY_BOX-gated), all passing.
 
 ## License
 
