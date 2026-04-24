@@ -1,0 +1,45 @@
+module Sashiko
+  module Adapters
+    # Faraday middleware that creates a client-kind span per HTTP request.
+    # Usage:
+    #   require "sashiko/adapters/faraday"
+    #   conn = Faraday.new("https://api.example.com") do |f|
+    #     f.use Sashiko::Adapters::Faraday::Middleware
+    #   end
+    #
+    # Attribute names follow OTel HTTP semantic conventions (stable).
+    module Faraday
+      class Middleware
+        def initialize(app)
+          @app = app
+        end
+
+        def call(env)
+          tracer = Sashiko.tracer
+          method = env.method.to_s.upcase
+          url    = env.url
+          attrs = {
+            "http.request.method" => method,
+            "url.full"            => url.to_s,
+            "server.address"      => url.host,
+            "server.port"         => url.port,
+          }
+          tracer.in_span("HTTP #{method}", attributes: attrs, kind: :client) do |span|
+            begin
+              response = @app.call(env)
+              span.set_attribute("http.response.status_code", response.status)
+              if response.status >= 400
+                span.status = OpenTelemetry::Trace::Status.error("HTTP #{response.status}")
+              end
+              response
+            rescue => e
+              span.record_exception(e)
+              span.status = OpenTelemetry::Trace::Status.error(e.message)
+              raise
+            end
+          end
+        end
+      end
+    end
+  end
+end
