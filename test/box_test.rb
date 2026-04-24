@@ -53,6 +53,10 @@ class BoxTest < Minitest::Test
   end
 
   def test_multi_tenant_exporters_do_not_cross_contaminate
+    # Inside a Box, use the box-local OpenTelemetry tracer directly rather
+    # than Sashiko.tracer — Sashiko's tracer method is defined in main's
+    # constant scope and wouldn't resolve to the box's OTel. This is the
+    # expected pattern when working inside a Box.
     tenant_setup = ->(label) {
       <<~RUBY
         require "opentelemetry/sdk"
@@ -62,7 +66,8 @@ class BoxTest < Minitest::Test
             OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(TENANT_EXPORTER)
           )
         end
-        Sashiko.tracer.in_span("work", attributes: { "tenant" => #{label.inspect} }) {}
+        tracer = OpenTelemetry.tracer_provider.tracer("tenant")
+        tracer.in_span("work", attributes: { "tenant" => #{label.inspect} }) {}
         TENANT_EXPORTER.finished_spans.map { |s| s.attributes["tenant"] }
       RUBY
     }

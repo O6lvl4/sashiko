@@ -7,13 +7,19 @@
 #
 #   * Two "tenants" live in the same Ruby process, each in its own Ruby::Box.
 #   * Each tenant loads its own copy of Sashiko, its own OTel SDK, its own
-#     in-memory exporter, and its own instrumented stub Anthropic client.
+#     in-memory exporter, and its own version of a stub Anthropic client.
 #   * Both tenants run the SAME business code through the SAME API surface.
 #   * Tenant A's spans stay in Tenant A's exporter. Tenant B's spans stay
 #     in Tenant B's exporter. Main process's world is never touched.
 #
 # This is not achievable with vanilla Ruby — monkey-patches like `prepend`
 # are inherently global. Ruby 4.0's Box lifts that limitation.
+#
+# IMPORTANT: inside a Box, use OpenTelemetry's tracer directly rather than
+# Sashiko.tracer. The latter's method body was defined in main's constant
+# scope, so it resolves OpenTelemetry to main's SDK instance (which is
+# likely unconfigured). Box-local spans should go through the box-local
+# OpenTelemetry::SDK.configure result.
 
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
 require "sashiko"
@@ -22,8 +28,6 @@ unless Sashiko::Box.enabled?
   abort "Run with RUBY_BOX=1 to enable Ruby::Box."
 end
 
-# -----------------------------------------------------------------------
-# Setup code, identical for both tenants (just different labels)
 # -----------------------------------------------------------------------
 
 def tenant_setup(label)
@@ -39,34 +43,32 @@ def tenant_setup(label)
       )
     end
 
-    # Tenant-local "Anthropic" stub
+    # Tenant-local "Anthropic" stub — each box has its own version
     module Anthropic
       class Messages
         def create(**params)
           sleep 0.005
-          { id: "#{label}_resp", model: params[:model], stop_reason: "end_turn",
-            usage: { input_tokens: 10, output_tokens: 5,
-                     cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } }
+          tracer = OpenTelemetry.tracer_provider.tracer("anthropic-stub")
+          tracer.in_span("chat \#{params[:model]}",
+                         attributes: { "gen_ai.system" => "anthropic",
+                                       "gen_ai.request.model" => params[:model] }) do
+            { id: "#{label}_resp", model: params[:model] }
+          end
         end
       end
     end
 
-    # Instrument Anthropic::Messages only inside this tenant's box
-    require "sashiko/adapters/anthropic"
-    Sashiko::Adapters::Anthropic.instrument!(Anthropic::Messages)
-
-    # Run tenant workload
-    Sashiko.tracer.in_span("tenant.request", attributes: { "tenant" => #{label.inspect} }) do
+    # Run tenant workload — each call emits a chat span through THIS box's
+    # OTel instance and ends up in THIS box's exporter.
+    tracer = OpenTelemetry.tracer_provider.tracer("tenant")
+    tracer.in_span("tenant.request", attributes: { "tenant" => #{label.inspect} }) do
       3.times { Anthropic::Messages.new.create(model: "claude-sonnet-4-6") }
     end
 
-    # Report back what THIS tenant saw
-    TENANT_EXPORTER.finished_spans.map { |s| [s.name, s.attributes["gen_ai.system"]] }
+    TENANT_EXPORTER.finished_spans.map { |s| [s.name, s.attributes["tenant"] || s.attributes["gen_ai.request.model"]] }
   RUBY
 end
 
-# -----------------------------------------------------------------------
-# Boot two tenants in two boxes
 # -----------------------------------------------------------------------
 
 tenant_a_box = Sashiko::Box.new_with_sashiko
@@ -76,12 +78,10 @@ tenant_b_box = Sashiko::Box.new_with_sashiko
 tenant_b_spans = tenant_b_box.eval(tenant_setup("tenant-B"))
 
 # -----------------------------------------------------------------------
-# Print what's in each place
-# -----------------------------------------------------------------------
 
 def print_spans(label, spans)
   puts "  #{label}: #{spans.length} span(s)"
-  spans.each { |name, system| puts "    - #{name}  gen_ai.system=#{system.inspect}" }
+  spans.each { |name, detail| puts "    - #{name}  detail=#{detail.inspect}" }
 end
 
 puts "=" * 70
@@ -90,26 +90,19 @@ puts "=" * 70
 print_spans("tenant-A exporter", tenant_a_spans)
 print_spans("tenant-B exporter", tenant_b_spans)
 
-# -----------------------------------------------------------------------
-# Isolation verification from main
-# -----------------------------------------------------------------------
-
 puts
 puts "=" * 70
 puts "Isolation verification:"
 puts "=" * 70
-puts "  Main process sees Anthropic::Messages class? #{defined?(Anthropic).inspect}"
-puts "  tenant-A saw Anthropic::Messages instrumented? #{
-  tenant_a_box.eval("Anthropic::Messages.instance_variable_get(:@__sashiko_instrumented)").inspect
+puts "  Main process sees Anthropic class? #{defined?(Anthropic).inspect}"
+puts "  tenant-A sees Anthropic? #{
+  tenant_a_box.eval('defined?(Anthropic)').inspect
 }"
-puts "  tenant-B saw Anthropic::Messages instrumented? #{
-  tenant_b_box.eval("Anthropic::Messages.instance_variable_get(:@__sashiko_instrumented)").inspect
-}"
-puts "  tenant-A response id visible to tenant-B? #{
-  tenant_b_box.eval("defined?(TENANT_A_RESP)").inspect
+puts "  tenant-B sees tenant-A's TENANT_EXPORTER? #{
+  tenant_b_box.eval('defined?(TENANT_A_EXPORTER)').inspect
 }"
 
 puts
-puts "Result: main is pristine, both tenants are fully instrumented in"
-puts "isolation, and their spans never mix. One process, N observability"
-puts "planes — that's what Ruby::Box buys you."
+puts "Result: main is pristine, both tenants have their own Anthropic class,"
+puts "OTel SDK, and exporter. Spans never cross boundaries."
+puts "One process, N observability planes — that's what Ruby::Box buys you."
