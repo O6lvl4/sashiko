@@ -1,0 +1,640 @@
+<svg id="graph-pretty" width="1654.0859375" xmlns="http://www.w3.org/2000/svg" class="flowchart" height="846.5" viewBox="0 0 1654.0859375 846.5" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#graph-pretty{font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;fill:#1E293B;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#graph-pretty .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#graph-pretty .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#graph-pretty .error-icon{fill:#F0FDFA;}#graph-pretty .error-text{fill:#0f0205;stroke:#0f0205;}#graph-pretty .edge-thickness-normal{stroke-width:1px;}#graph-pretty .edge-thickness-thick{stroke-width:3.5px;}#graph-pretty .edge-pattern-solid{stroke-dasharray:0;}#graph-pretty .edge-thickness-invisible{stroke-width:0;fill:none;}#graph-pretty .edge-pattern-dashed{stroke-dasharray:3;}#graph-pretty .edge-pattern-dotted{stroke-dasharray:2;}#graph-pretty .marker{fill:#94A3B8;stroke:#94A3B8;}#graph-pretty .marker.cross{stroke:#94A3B8;}#graph-pretty svg{font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;}#graph-pretty p{margin:0;}#graph-pretty .label{font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:#1E293B;}#graph-pretty .cluster-label text{fill:#0F172A;}#graph-pretty .cluster-label span{color:#0F172A;}#graph-pretty .cluster-label span p{background-color:transparent;}#graph-pretty .label text,#graph-pretty span{fill:#1E293B;color:#1E293B;}#graph-pretty .node rect,#graph-pretty .node circle,#graph-pretty .node ellipse,#graph-pretty .node polygon,#graph-pretty .node path{fill:#EEF2FF;stroke:#A5B4FC;stroke-width:1px;}#graph-pretty .rough-node .label text,#graph-pretty .node .label text,#graph-pretty .image-shape .label,#graph-pretty .icon-shape .label{text-anchor:middle;}#graph-pretty .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#graph-pretty .rough-node .label,#graph-pretty .node .label,#graph-pretty .image-shape .label,#graph-pretty .icon-shape .label{text-align:center;}#graph-pretty .node.clickable{cursor:pointer;}#graph-pretty .root .anchor path{fill:#94A3B8!important;stroke-width:0;stroke:#94A3B8;}#graph-pretty .arrowheadPath{fill:#000000;}#graph-pretty .edgePath .path{stroke:#94A3B8;stroke-width:1px;}#graph-pretty .flowchart-link{stroke:#94A3B8;fill:none;}#graph-pretty .edgeLabel{background-color:#FFFFFF;text-align:center;}#graph-pretty .edgeLabel p{background-color:#FFFFFF;}#graph-pretty .edgeLabel rect{opacity:0.5;background-color:#FFFFFF;fill:#FFFFFF;}#graph-pretty .labelBkg{background-color:rgba(255, 255, 255, 0.5);}#graph-pretty .cluster rect{fill:#F5F3FF;stroke:#C7D2FE;stroke-width:1px;}#graph-pretty .cluster text{fill:#0F172A;}#graph-pretty .cluster span{color:#0F172A;}#graph-pretty div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:12px;background:#F0FDFA;border:1px solid hsl(166.1538461538, 36.4705882353%, 86.6666666667%);border-radius:2px;pointer-events:none;z-index:100;}#graph-pretty .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#1E293B;}#graph-pretty rect.text{fill:none;stroke-width:0;}#graph-pretty .icon-shape,#graph-pretty .image-shape{background-color:#FFFFFF;text-align:center;}#graph-pretty .icon-shape p,#graph-pretty .image-shape p{background-color:#FFFFFF;padding:2px;}#graph-pretty .icon-shape .label rect,#graph-pretty .image-shape .label rect{opacity:0.5;background-color:#FFFFFF;fill:#FFFFFF;}#graph-pretty .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#graph-pretty .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#graph-pretty .node .neo-node{stroke:#A5B4FC;}#graph-pretty [data-look="neo"].node rect,#graph-pretty [data-look="neo"].cluster rect,#graph-pretty [data-look="neo"].node polygon{stroke:url(#graph-pretty-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#graph-pretty [data-look="neo"].node path{stroke:url(#graph-pretty-gradient);stroke-width:1px;}#graph-pretty [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#graph-pretty [data-look="neo"].node .neo-line path{stroke:#A5B4FC;filter:none;}#graph-pretty [data-look="neo"].node circle{stroke:url(#graph-pretty-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#graph-pretty [data-look="neo"].node circle .state-start{fill:#000000;}#graph-pretty [data-look="neo"].icon-shape .icon{fill:url(#graph-pretty-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#graph-pretty [data-look="neo"].icon-shape .icon-neo path{stroke:url(#graph-pretty-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#graph-pretty :root{--mermaid-font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}#graph-pretty .isolated&gt;*{stroke-dasharray:4 4!important;}#graph-pretty .isolated span{stroke-dasharray:4 4!important;}</style><g><marker id="graph-pretty_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="graph-pretty_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="graph-pretty_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></path></marker><marker id="graph-pretty_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></polygon></marker><marker id="graph-pretty_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="graph-pretty_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="graph-pretty_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="graph-pretty_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="graph-pretty_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="graph-pretty_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="graph-pretty_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"></path></marker><marker id="graph-pretty_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"></path></marker><g class="root"><g class="clusters"></g><g class="edgePaths"></g><g class="edgeLabels"></g><g class="nodes"><g class="root" transform="translate(0, 0)"><g class="clusters"><g class="cluster" id="graph-pretty-process" data-look="classic"><rect style="" x="8" y="8" width="1638.0859375" height="830.5"></rect><g class="cluster-label" transform="translate(714.58984375, 8)"><foreignObject width="224.90625" height="21"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>one Ruby process (RUBY_BOX=1)</p></span></div></foreignObject></g></g></g><g class="edgePaths"><path d="M958.91,320L968.846,320C978.783,320,998.655,320,1017.936,324.876C1037.218,329.753,1055.908,339.505,1065.253,344.381L1074.598,349.258" id="graph-pretty-L_boxA_boxB_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_boxA_boxB_0" data-points="W3sieCI6OTU4LjkxMDE1NjI1LCJ5IjozMjB9LHsieCI6MTAxOC41MjczNDM3NSwieSI6MzIwfSx7IngiOjEwNzguMTQ0NTMxMjUsInkiOjM1MS4xMDgxNzI5NDY4NDI1fV0=" data-look="classic" marker-end="url(#graph-pretty_flowchart-v2-pointEnd)"></path><path d="M286.725,392L300.246,380C313.767,368,340.81,344,363.6,332C386.391,320,404.93,320,414.199,320L423.469,320" id="graph-pretty-L_main_boxA_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_main_boxA_0" data-points="W3sieCI6Mjg2LjcyNTQ1NjMwNTMwOTc2LCJ5IjozOTJ9LHsieCI6MzY3Ljg1MTU2MjUsInkiOjMyMH0seyJ4Ijo0MjcuNDY4NzUsInkiOjMyMH1d" data-look="classic" marker-end="url(#graph-pretty_flowchart-v2-pointEnd)"></path><path d="M286.725,587L300.246,599C313.767,611,340.81,635,408.554,647C476.298,659,584.743,659,693.189,659C801.635,659,910.081,659,973.65,654.124C1037.218,649.247,1055.908,639.495,1065.253,634.619L1074.598,629.742" id="graph-pretty-L_main_boxB_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_main_boxB_0" data-points="W3sieCI6Mjg2LjcyNTQ1NjMwNTMwOTc2LCJ5Ijo1ODd9LHsieCI6MzY3Ljg1MTU2MjUsInkiOjY1OX0seyJ4Ijo2OTMuMTg5NDUzMTI1LCJ5Ijo2NTl9LHsieCI6MTAxOC41MjczNDM3NSwieSI6NjU5fSx7IngiOjEwNzguMTQ0NTMxMjUsInkiOjYyNy44OTE4MjcwNTMxNTc1fV0=" data-look="classic" marker-end="url(#graph-pretty_flowchart-v2-pointEnd)"></path></g><g class="edgeLabels"><g class="edgeLabel" transform="translate(1018.52734375, 320)"><g class="label" data-id="L_boxA_boxB_0" transform="translate(-22.1171875, -27)"><foreignObject width="44.234375" height="54"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>isolated</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(367.8515625, 320)"><g class="label" data-id="L_main_boxA_0" transform="translate(-22.1171875, -27)"><foreignObject width="44.234375" height="54"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>isolated</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(693.189453125, 659)"><g class="label" data-id="L_main_boxB_0" transform="translate(-22.1171875, -27)"><foreignObject width="44.234375" height="54"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>isolated</p></span></div></foreignObject></g></g></g><g class="nodes"><g class="root" transform="translate(1070.14453125, 204.5)"><g class="clusters"><g class="cluster isolated" id="graph-pretty-boxB" data-look="classic"><rect style="stroke-dasharray:4 4 !important;fill:#fff4ec !important;stroke:#f97316 !important" x="8" y="8" width="514.44140625" height="537"></rect><g class="cluster-label" transform="translate(190.955078125, 8)"><foreignObject width="148.53125" height="21"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Ruby::Box — tenant-B</p></span></div></foreignObject></g></g></g><g class="edgePaths"><path d="M139.059,121.5L139.059,133.083C139.059,144.667,139.059,167.833,152.488,188.866C165.918,209.899,192.778,228.799,206.208,238.248L219.637,247.698" id="graph-pretty-L_SashikoB_OtelB_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_SashikoB_OtelB_0" data-points="W3sieCI6MTM5LjA1ODU5Mzc1LCJ5IjoxMjEuNX0seyJ4IjoxMzkuMDU4NTkzNzUsInkiOjE5MX0seyJ4IjoyMjIuOTA4Nzg1NjM1OTY0OSwieSI6MjUwfV0=" data-look="classic" marker-end="url(#graph-pretty_flowchart-v2-pointEnd)"></path><path d="M260.57,303L260.57,312.833C260.57,322.667,260.57,342.333,260.57,361.333C260.57,380.333,260.57,398.667,260.57,407.833L260.57,417" id="graph-pretty-L_OtelB_ExporterB_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_OtelB_ExporterB_0" data-points="W3sieCI6MjYwLjU3MDMxMjUsInkiOjMwM30seyJ4IjoyNjAuNTcwMzEyNSwieSI6MzYyfSx7IngiOjI2MC41NzAzMTI1LCJ5Ijo0MjF9XQ==" data-look="classic" marker-end="url(#graph-pretty_flowchart-v2-pointEnd)"></path><path d="M382.082,132L382.082,141.833C382.082,151.667,382.082,171.333,368.652,190.616C355.222,209.899,328.363,228.799,314.933,238.248L301.503,247.698" id="graph-pretty-L_AnthropicB_OtelB_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_AnthropicB_OtelB_0" data-points="W3sieCI6MzgyLjA4MjAzMTI1LCJ5IjoxMzJ9LHsieCI6MzgyLjA4MjAzMTI1LCJ5IjoxOTF9LHsieCI6Mjk4LjIzMTgzOTM2NDAzNTA3LCJ5IjoyNTB9XQ==" data-look="classic" marker-end="url(#graph-pretty_flowchart-v2-pointEnd)"></path></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" data-id="L_SashikoB_OtelB_0" transform="translate(-8, -9)"><foreignObject width="16" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_OtelB_ExporterB_0" transform="translate(-8, -9)"><foreignObject width="16" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_AnthropicB_OtelB_0" transform="translate(-8, -9)"><foreignObject width="16" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default" id="graph-pretty-flowchart-SashikoB-11" data-look="classic" transform="translate(139.05859375, 95)"><rect class="basic label-container" style="" x="-87.6640625" y="-26.5" width="175.328125" height="53"></rect><g class="label" style="" transform="translate(-55.6640625, -10.5)"><rect></rect><foreignObject width="111.328125" height="21"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>Sashiko (copy B)</p></span></div></foreignObject></g></g><g class="node default" id="graph-pretty-flowchart-OtelB-12" data-look="classic" transform="translate(260.5703125, 276.5)"><rect class="basic label-container" style="" x="-104.453125" y="-26.5" width="208.90625" height="53"></rect><g class="label" style="" transform="translate(-72.453125, -10.5)"><rect></rect><foreignObject width="144.90625" height="21"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>OTel tracer provider B</p></span></div></foreignObject></g></g><g class="node default" id="graph-pretty-flowchart-ExporterB-13" data-look="classic" transform="translate(260.5703125, 458)"><rect class="basic label-container" style="" x="-76.921875" y="-37" width="153.84375" height="74"></rect><g class="label" style="" transform="translate(-44.921875, -21)"><rect></rect><foreignObject width="89.84375" height="42"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>Exporter B<br>(Honeycomb)</p></span></div></foreignObject></g></g><g class="node default" id="graph-pretty-flowchart-AnthropicB-14" data-look="classic" transform="translate(382.08203125, 95)"><rect class="basic label-container" style="" x="-105.359375" y="-37" width="210.71875" height="74"></rect><g class="label" style="" transform="translate(-73.359375, -21)"><rect></rect><foreignObject width="146.71875" height="42"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>Anthropic::Messages<br>instrumented (copy B)</p></span></div></foreignObject></g></g></g></g><g class="root" transform="translate(419.46875, 35)"><g class="clusters"><g class="cluster isolated" id="graph-pretty-boxA" data-look="classic"><rect style="stroke-dasharray:4 4 !important;fill:#eef6ff !important;stroke:#3b82f6 !important" x="8" y="8" width="515.44140625" height="537"></rect><g class="cluster-label" transform="translate(191.212890625, 8)"><foreignObject width="149.015625" height="21"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Ruby::Box — tenant-A</p></span></div></foreignObject></g></g></g><g class="edgePaths"><path d="M139.309,121.5L139.309,133.083C139.309,144.667,139.309,167.833,152.767,188.867C166.225,209.9,193.141,228.801,206.6,238.251L220.058,247.701" id="graph-pretty-L_SashikoA_OtelA_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_SashikoA_OtelA_0" data-points="W3sieCI6MTM5LjMwODU5Mzc1LCJ5IjoxMjEuNX0seyJ4IjoxMzkuMzA4NTkzNzUsInkiOjE5MX0seyJ4IjoyMjMuMzMxMzAwMjU1ODQ3OTYsInkiOjI1MH1d" data-look="classic" marker-end="url(#graph-pretty_flowchart-v2-pointEnd)"></path><path d="M261.07,303L261.07,312.833C261.07,322.667,261.07,342.333,261.07,361.333C261.07,380.333,261.07,398.667,261.07,407.833L261.07,417" id="graph-pretty-L_OtelA_ExporterA_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_OtelA_ExporterA_0" data-points="W3sieCI6MjYxLjA3MDMxMjUsInkiOjMwM30seyJ4IjoyNjEuMDcwMzEyNSwieSI6MzYyfSx7IngiOjI2MS4wNzAzMTI1LCJ5Ijo0MjF9XQ==" data-look="classic" marker-end="url(#graph-pretty_flowchart-v2-pointEnd)"></path><path d="M382.832,132L382.832,141.833C382.832,151.667,382.832,171.333,369.374,190.617C355.916,209.9,328.999,228.801,315.541,238.251L302.083,247.701" id="graph-pretty-L_AnthropicA_OtelA_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_AnthropicA_OtelA_0" data-points="W3sieCI6MzgyLjgzMjAzMTI1LCJ5IjoxMzJ9LHsieCI6MzgyLjgzMjAzMTI1LCJ5IjoxOTF9LHsieCI6Mjk4LjgwOTMyNDc0NDE1MjA0LCJ5IjoyNTB9XQ==" data-look="classic" marker-end="url(#graph-pretty_flowchart-v2-pointEnd)"></path></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" data-id="L_SashikoA_OtelA_0" transform="translate(-8, -9)"><foreignObject width="16" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_OtelA_ExporterA_0" transform="translate(-8, -9)"><foreignObject width="16" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_AnthropicA_OtelA_0" transform="translate(-8, -9)"><foreignObject width="16" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default" id="graph-pretty-flowchart-SashikoA-1" data-look="classic" transform="translate(139.30859375, 95)"><rect class="basic label-container" style="" x="-87.9140625" y="-26.5" width="175.828125" height="53"></rect><g class="label" style="" transform="translate(-55.9140625, -10.5)"><rect></rect><foreignObject width="111.828125" height="21"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>Sashiko (copy A)</p></span></div></foreignObject></g></g><g class="node default" id="graph-pretty-flowchart-OtelA-2" data-look="classic" transform="translate(261.0703125, 276.5)"><rect class="basic label-container" style="" x="-104.703125" y="-26.5" width="209.40625" height="53"></rect><g class="label" style="" transform="translate(-72.703125, -10.5)"><rect></rect><foreignObject width="145.40625" height="21"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>OTel tracer provider A</p></span></div></foreignObject></g></g><g class="node default" id="graph-pretty-flowchart-ExporterA-3" data-look="classic" transform="translate(261.0703125, 458)"><rect class="basic label-container" style="" x="-67" y="-37" width="134" height="74"></rect><g class="label" style="" transform="translate(-35, -21)"><rect></rect><foreignObject width="70" height="42"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>Exporter A<br>(Jaeger)</p></span></div></foreignObject></g></g><g class="node default" id="graph-pretty-flowchart-AnthropicA-4" data-look="classic" transform="translate(382.83203125, 95)"><rect class="basic label-container" style="" x="-105.609375" y="-37" width="211.21875" height="74"></rect><g class="label" style="" transform="translate(-73.609375, -21)"><rect></rect><foreignObject width="147.21875" height="42"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>Anthropic::Messages<br>instrumented (copy A)</p></span></div></foreignObject></g></g></g></g><g class="root" transform="translate(37.5, 384)"><g class="clusters"><g class="cluster isolated" id="graph-pretty-main" data-look="classic"><rect style="stroke-dasharray:4 4 !important;fill:#f4f4f5 !important;stroke:#71717a !important" x="8" y="8" width="262.734375" height="195"></rect><g class="cluster-label" transform="translate(122.7734375, 8)"><foreignObject width="33.1875" height="21"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Main</p></span></div></foreignObject></g></g></g><g class="edgePaths"></g><g class="edgeLabels"></g><g class="nodes"><g class="node default" id="graph-pretty-flowchart-MainApp-0" data-look="classic" transform="translate(139.3671875, 105.5)"><rect class="basic label-container" style="" x="-96.3671875" y="-47.5" width="192.734375" height="95"></rect><g class="label" style="" transform="translate(-64.3671875, -31.5)"><rect></rect><foreignObject width="128.734375" height="63"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>main app code<br>(no Anthropic,<br>no instrumentation)</p></span></div></foreignObject></g></g></g></g></g></g></g></g></g><defs><filter id="graph-pretty-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><defs><filter id="graph-pretty-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><linearGradient id="graph-pretty-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#A5B4FC" stop-opacity="1"></stop><stop offset="100%" stop-color="hsl(327.2727272727, 33.3333333333%, 87.0588235294%)" stop-opacity="1"></stop></linearGradient><style>
+  .mp-root svg { overflow: visible; }
+
+  /* ノード: 柔らかい影 + 繊細な枠線 */
+  .node rect,
+  .node polygon,
+  .node circle,
+  .node ellipse,
+  .node path {
+    filter:
+      drop-shadow(0 1px 2px rgba(15, 23, 42, 0.05))
+      drop-shadow(0 6px 14px rgba(15, 23, 42, 0.06));
+    stroke-width: 1.2px !important;
+  }
+
+  /* 四角ノードは角丸 */
+  .node rect { rx: 10; ry: 10; }
+
+  /* ===== flowchart: 形状ごとに色分け ===== */
+  /* 長方形 → インディゴ */
+  .flowchart g.node.default rect.basic.label-container {
+    fill: #EEF2FF !important;
+    stroke: #A5B4FC !important;
+    stroke-width: 1.5px !important;
+  }
+  /* ひし形（判断） → 琥珀 */
+  .flowchart g.node.default polygon.label-container {
+    fill: #FEF3C7 !important;
+    stroke: #FBBF24 !important;
+    stroke-width: 1.5px !important;
+  }
+  /* 円柱/丸角（DB, パスで描画） → エメラルド */
+  .flowchart g.node.default g.basic.label-container.outer-path path:nth-of-type(1),
+  .flowchart g.node.default .basic.label-container.outer-path path:nth-of-type(1) {
+    fill: #ECFDF5 !important;
+  }
+  .flowchart g.node.default g.basic.label-container.outer-path path:nth-of-type(2),
+  .flowchart g.node.default .basic.label-container.outer-path path:nth-of-type(2) {
+    stroke: #6EE7B7 !important;
+    stroke-width: 1.5px !important;
+  }
+  /* サブグラフ（クラスタ） → ラベンダーがかった背景 */
+  .flowchart g.cluster rect {
+    fill: #F5F3FF !important;
+    stroke: #C4B5FD !important;
+    stroke-dasharray: 4 4 !important;
+  }
+
+  /* エッジ: 細めで上品に */
+  .edgePath path.path,
+  .flowchart-link {
+    stroke-width: 1.5px !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+  }
+
+  /* 矢印ヘッド */
+  .arrowheadPath,
+  marker path {
+    stroke-width: 0 !important;
+  }
+
+  /* エッジラベル: 白ピル風 */
+  .edgeLabel,
+  .edgeLabel div,
+  .edgeLabel span {
+    background-color: rgba(255, 255, 255, 0.96) !important;
+    color: #334155 !important;
+    font-size: 12px !important;
+  }
+  .edgeLabel {
+    padding: 2px 8px !important;
+    border-radius: 999px !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  }
+
+  /* クラスタ（サブグラフ） */
+  .cluster rect {
+    rx: 14 !important;
+    ry: 14 !important;
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.04));
+    stroke-dasharray: 0 !important;
+    stroke-width: 1px !important;
+  }
+  .cluster-label .nodeLabel,
+  .cluster text {
+    font-weight: 600 !important;
+    fill: #0F172A !important;
+    color: #0F172A !important;
+  }
+
+  /* ラベル類のフォント統一 */
+  .nodeLabel,
+  .edgeLabel,
+  .cluster text,
+  .actor,
+  text.actor &gt; tspan,
+  .messageText,
+  .loopText,
+  .noteText,
+  .labelText,
+  .sectionTitle,
+  .titleText,
+  .taskText,
+  .grid text {
+    font-family: "Inter", system-ui, sans-serif !important;
+  }
+
+  /* シーケンス図: アクターをインディゴのピルに */
+  rect.actor,
+  .actor {
+    fill: #EEF2FF !important;
+    stroke: #A5B4FC !important;
+    stroke-width: 1.5px !important;
+    rx: 10 !important;
+    ry: 10 !important;
+    filter: drop-shadow(0 2px 6px rgba(99, 102, 241, 0.14));
+  }
+  .actor-line {
+    stroke: #C7D2FE !important;
+    stroke-width: 1.5px !important;
+    stroke-dasharray: 2 4 !important;
+  }
+  /* アクティベーション（呼び出し中の縦棒）をアクセント色に */
+  rect.activation0, rect.activation1, rect.activation2 {
+    fill: #E0E7FF !important;
+    stroke: #818CF8 !important;
+  }
+  /* メッセージ矢印を少しだけコントラスト上げる */
+  .messageLine0, .messageLine1, line.messageLine0, line.messageLine1, path.messageLine0, path.messageLine1 {
+    stroke: #6366F1 !important;
+    stroke-width: 1.5px !important;
+  }
+  /* ループ/オプト/alt ラベルボックス */
+  rect.labelBox {
+    fill: #EEF2FF !important;
+    stroke: #A5B4FC !important;
+    rx: 6 !important;
+    ry: 6 !important;
+  }
+
+  /* ノートに軽い陰影 */
+  .note, g.note rect {
+    filter: drop-shadow(0 2px 6px rgba(234, 179, 8, 0.12));
+    rx: 8 !important;
+    ry: 8 !important;
+  }
+
+  /* ===== class diagram (mermaid v11: path 2 枚重ね構造) ===== */
+  /* 1 枚目 path = 塗り、2 枚目 path = 手書き風アウトライン */
+  .classDiagram g.node.default g.basic.label-container.outer-path path:nth-of-type(1) {
+    fill: #E0E7FF !important;
+  }
+  .classDiagram g.node.default g.basic.label-container.outer-path path:nth-of-type(2) {
+    stroke: #818CF8 !important;
+    stroke-width: 1.8px !important;
+  }
+  .classDiagram g.node.default g.basic.label-container {
+    filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.06)) drop-shadow(0 12px 28px rgba(99, 102, 241, 0.20));
+  }
+  /* 区切り線もインディゴ系、すこし濃く */
+  .classDiagram g.divider path {
+    stroke: #A5B4FC !important;
+    stroke-width: 1.4px !important;
+  }
+  /* タイトル（クラス名）をアクセントカラーに（幅計算済みのためサイズは据え置き） */
+  .classDiagram g.label-group .nodeLabel p,
+  .classDiagram g.label-group .nodeLabel span,
+  .classDiagram g.label-group foreignObject div {
+    color: #4338CA !important;
+  }
+  /* members / methods は本文色 */
+  .classDiagram g.members-group .nodeLabel p,
+  .classDiagram g.methods-group .nodeLabel p,
+  .classDiagram g.members-group .nodeLabel span,
+  .classDiagram g.methods-group .nodeLabel span {
+    color: #1E293B !important;
+  }
+  /* relation エッジ */
+  .classDiagram .relation {
+    stroke: #94A3B8 !important;
+    stroke-width: 1.3px !important;
+    stroke-linecap: round !important;
+  }
+
+  /* ===== state diagram ===== */
+  g.stateGroup rect,
+  .node.statediagram-state rect,
+  .node rect.state,
+  rect.state,
+  g.node.statediagram-state &gt; rect,
+  .statediagram-state &gt; rect {
+    rx: 12 !important;
+    ry: 12 !important;
+    fill: #EEF2FF !important;
+    stroke: #C7D2FE !important;
+    stroke-width: 1.2px !important;
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.05)) drop-shadow(0 6px 14px rgba(99, 102, 241, 0.10));
+  }
+  g.stateGroup .title text,
+  .stateLabel,
+  .statediagram-state text,
+  g.node.statediagram-state text {
+    font-weight: 600 !important;
+    fill: #1E293B !important;
+    font-size: 14px !important;
+  }
+  /* 開始ノード: 濃いインディゴ + グロー */
+  circle.start,
+  .node circle.start,
+  g.node.statediagram-state circle.start,
+  g.statediagram-cluster circle.start,
+  [id$="-start"] circle,
+  g.node[id*="start"] &gt; circle {
+    fill: #6366F1 !important;
+    stroke: #FFFFFF !important;
+    stroke-width: 3px !important;
+    r: 10 !important;
+    filter: drop-shadow(0 2px 6px rgba(99, 102, 241, 0.45));
+  }
+  /* 終了ノード: 二重丸、濃い外枠 */
+  circle.end,
+  .node circle.end,
+  [id$="-end"] circle,
+  g.node[id*="end"] &gt; circle {
+    fill: #FFFFFF !important;
+    stroke: #475569 !important;
+    stroke-width: 2px !important;
+  }
+  circle.end-inner,
+  g.node[id*="end"] circle.end-inner {
+    fill: #475569 !important;
+  }
+  .transition,
+  .edgePath .path.transition,
+  path.transition {
+    stroke: #64748B !important;
+    stroke-width: 1.4px !important;
+    stroke-linecap: round !important;
+    opacity: 0.9 !important;
+  }
+  /* トランジション矢印とラベル */
+  .statediagram .edgeLabel {
+    background-color: rgba(255, 255, 255, 0.96) !important;
+  }
+
+  /* ===== ER diagram (mermaid v11: outer-path + row-rect) ===== */
+  /* エンティティ外枠: 塗り＋手書き風アウトラインの 2 枚構造 */
+  .erDiagram g.node.default g.outer-path path:nth-of-type(1) {
+    fill: #EEF2FF !important;
+  }
+  .erDiagram g.node.default g.outer-path path:nth-of-type(2) {
+    stroke: #C7D2FE !important;
+    stroke-width: 1.3px !important;
+  }
+  .erDiagram g.node.default g.outer-path {
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.05)) drop-shadow(0 8px 20px rgba(99, 102, 241, 0.12));
+  }
+  /* 属性行: 白と slate-50 の交互塗り */
+  .erDiagram g.row-rect-odd path:nth-of-type(1) {
+    fill: #FFFFFF !important;
+  }
+  .erDiagram g.row-rect-even path:nth-of-type(1) {
+    fill: #F8FAFC !important;
+  }
+  .erDiagram g.row-rect-odd path:nth-of-type(2),
+  .erDiagram g.row-rect-even path:nth-of-type(2) {
+    stroke: #E2E8F0 !important;
+    stroke-width: 1px !important;
+  }
+  /* エンティティ名: 幅計算済みのため色のみ上書き */
+  .erDiagram g.label.name .nodeLabel p,
+  .erDiagram g.label.name .nodeLabel span,
+  .erDiagram g.label.name foreignObject div {
+    color: #4338CA !important;
+    font-weight: 700 !important;
+  }
+  /* 属性テキスト */
+  .erDiagram g.label.attribute-type .nodeLabel p,
+  .erDiagram g.label.attribute-name .nodeLabel p,
+  .erDiagram g.label.attribute-comment .nodeLabel p {
+    color: #334155 !important;
+  }
+  .erDiagram g.label.attribute-keys .nodeLabel p {
+    color: #6366F1 !important;
+    font-weight: 600 !important;
+  }
+  /* リレーション線 */
+  .erDiagram .relationshipLine {
+    stroke: #94A3B8 !important;
+    stroke-width: 1.3px !important;
+  }
+
+  /* ===== quadrant ===== */
+  .quadrant-external-border-rect {
+    rx: 10 !important;
+    ry: 10 !important;
+    stroke-width: 1.2px !important;
+    filter: drop-shadow(0 2px 8px rgba(15, 23, 42, 0.06));
+  }
+  .quadrant-title {
+    font-weight: 700 !important;
+    font-size: 18px !important;
+    fill: #0F172A !important;
+  }
+  .quadrant-point text,
+  text.quadrant-point-text {
+    font-weight: 500 !important;
+    fill: #0F172A !important;
+  }
+  circle.quadrant-point,
+  .quadrant-point circle {
+    r: 7 !important;
+    fill: #6366F1 !important;
+    stroke: #FFFFFF !important;
+    stroke-width: 2.5px !important;
+    filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.35));
+  }
+
+  /* ===== pie (洗練された Chart.js 風) ===== */
+  g[id^="pie"] .pieCircle,
+  .pieCircle {
+    stroke: #FFFFFF !important;
+    stroke-width: 4px !important;
+    stroke-linejoin: round !important;
+    filter:
+      drop-shadow(0 1px 2px rgba(15, 23, 42, 0.04))
+      drop-shadow(0 14px 32px rgba(15, 23, 42, 0.10));
+  }
+  .pieOuterCircle {
+    stroke: transparent !important;
+    fill: transparent !important;
+  }
+  .pieTitleText {
+    font-weight: 700 !important;
+    font-size: 20px !important;
+    fill: #0F172A !important;
+    letter-spacing: -0.2px !important;
+  }
+  text.slice {
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    fill: #FFFFFF !important;
+    paint-order: stroke;
+    stroke: rgba(15, 23, 42, 0.35);
+    stroke-width: 0.5px;
+    letter-spacing: -0.2px !important;
+  }
+  /* 凡例を丸いドット風に */
+  .legend rect {
+    rx: 10 !important;
+    ry: 10 !important;
+    stroke: transparent !important;
+    width: 10 !important;
+    height: 10 !important;
+    filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.12));
+  }
+  .legend text, text.legend {
+    font-size: 13px !important;
+    fill: #1E293B !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.1px !important;
+  }
+
+  /* ===== mindmap ===== */
+  .mindmap-node &gt; rect,
+  .mindmap-node &gt; circle,
+  .mindmap-node &gt; ellipse,
+  .mindmap-node &gt; polygon,
+  .mindmap-node &gt; path {
+    stroke-width: 0 !important;
+    filter:
+      drop-shadow(0 1px 2px rgba(15, 23, 42, 0.06))
+      drop-shadow(0 8px 20px rgba(15, 23, 42, 0.08));
+  }
+  .mindmap-node [class^="node-line"] {
+    stroke-width: 2px !important;
+    stroke-linecap: round !important;
+    opacity: 0.35 !important;
+  }
+  /* エッジ（ブランチの線）を色とトーンで統一 */
+  g.edge path,
+  .edge path,
+  .section-edge-0, .section-edge-1, .section-edge-2, .section-edge-3,
+  .section-edge-4, .section-edge-5, .section-edge-6, .section-edge-7 {
+    stroke-width: 1.4px !important;
+    stroke-linecap: round !important;
+    opacity: 0.7 !important;
+  }
+  /* ルートノードを際立たせる */
+  g.mindmap-node.section-root circle,
+  g.mindmap-node.section-root rect,
+  g.mindmap-node.section-root ellipse,
+  g.mindmap-node.section--1 circle,
+  g.mindmap-node.section--1 rect {
+    fill: #6366F1 !important;
+    filter: drop-shadow(0 6px 18px rgba(99, 102, 241, 0.35));
+  }
+  g.mindmap-node text,
+  g.mindmap-node .nodeLabel,
+  g.mindmap-node .nodeLabel span {
+    font-weight: 500 !important;
+    color: #FFFFFF !important;
+    fill: #FFFFFF !important;
+  }
+
+  /* ===== timeline ===== */
+  .timeline-node rect,
+  g.timeline-node &gt; rect,
+  g.timeline-node foreignObject {
+    filter: drop-shadow(0 3px 10px rgba(15, 23, 42, 0.10));
+  }
+  .timeline-node .node-bkg,
+  g.timeline-node rect {
+    rx: 12 !important;
+    ry: 12 !important;
+    stroke-width: 0 !important;
+  }
+  .timeline-node text,
+  .timeline-node .nodeLabel,
+  .timeline-node .nodeLabel span,
+  g.timeline-node text,
+  g.timeline-node .nodeLabel,
+  g.timeline-node .nodeLabel span,
+  g.timeline-node foreignObject div,
+  g.timeline-node foreignObject span {
+    font-weight: 600 !important;
+    color: #FFFFFF !important;
+    fill: #FFFFFF !important;
+    font-size: 14px !important;
+    letter-spacing: 0.2px !important;
+  }
+  /* タイムラインの縦接続線: 視認できる濃さにする */
+  .lineWrapper line,
+  [class^="node-line"] {
+    stroke: #64748B !important;
+    stroke-width: 1.3px !important;
+    stroke-dasharray: 3 3 !important;
+    stroke-linecap: round !important;
+    opacity: 0.85 !important;
+  }
+  .sectionTitle {
+    font-weight: 700 !important;
+    font-size: 15px !important;
+    fill: #0F172A !important;
+  }
+  .titleText {
+    font-weight: 700 !important;
+    font-size: 20px !important;
+    fill: #0F172A !important;
+  }
+  /* タイムライン軸線 */
+  line.timeline-path,
+  #arrowhead path {
+    stroke: #94A3B8 !important;
+    fill: #94A3B8 !important;
+    stroke-width: 1.5px !important;
+  }
+
+  /* ===== journey (モダンなフラット + 立体感) ===== */
+  .task-line,
+  .actor-line {
+    opacity: 0.85 !important;
+    stroke: #64748B !important;
+    stroke-dasharray: 3 3 !important;
+    stroke-width: 1.2px !important;
+    stroke-linecap: round !important;
+  }
+  .task rect,
+  g.task &gt; rect {
+    rx: 14 !important;
+    ry: 14 !important;
+    filter:
+      drop-shadow(0 1px 2px rgba(15, 23, 42, 0.04))
+      drop-shadow(0 10px 24px rgba(15, 23, 42, 0.08));
+    stroke-width: 0 !important;
+  }
+  .task-type-0 text,
+  .task text {
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    fill: #0F172A !important;
+    letter-spacing: -0.1px !important;
+  }
+  /* 顔バッジ: ビビッドな amber-400 ソリッド + 深めの影で立体感 */
+  circle.face,
+  .face {
+    fill: #FBBF24 !important;
+    stroke: none !important;
+    r: 18 !important;
+    filter:
+      drop-shadow(0 2px 4px rgba(217, 119, 6, 0.25))
+      drop-shadow(0 8px 16px rgba(217, 119, 6, 0.20));
+  }
+  .mouth {
+    stroke: #78350F !important;
+    stroke-width: 2.2px !important;
+    stroke-linecap: round !important;
+    fill: transparent !important;
+  }
+  .eyes {
+    fill: #78350F !important;
+    stroke: none !important;
+  }
+  /* アクター（凡例）ドット: 統一パレットで上品に */
+  circle.actor-0 { fill: #818CF8 !important; }
+  circle.actor-1 { fill: #34D399 !important; }
+  circle.actor-2 { fill: #F472B6 !important; }
+  circle.actor-3 { fill: #FBBF24 !important; }
+  circle.actor-4 { fill: #60A5FA !important; }
+  circle.actor-5 { fill: #A78BFA !important; }
+  circle.actor-0, circle.actor-1, circle.actor-2,
+  circle.actor-3, circle.actor-4, circle.actor-5 {
+    stroke: #FFFFFF !important;
+    stroke-width: 2px !important;
+    filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.14));
+  }
+  .legend text {
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    fill: #1E293B !important;
+    letter-spacing: 0.1px !important;
+  }
+  /* セクションバーはやや濃く、タスクは淡く。立体感を出す */
+  .section-type-0 { fill: #C7D2FE !important; }
+  .section-type-1 { fill: #DDD6FE !important; }
+  .section-type-2 { fill: #FBCFE8 !important; }
+  .section-type-3 { fill: #FDE68A !important; }
+  .section-type-4 { fill: #A7F3D0 !important; }
+  .section-type-5 { fill: #A5F3FC !important; }
+  .task-type-0 { fill: #EEF2FF !important; }
+  .task-type-1 { fill: #F5F3FF !important; }
+  .task-type-2 { fill: #FDF2F8 !important; }
+  .task-type-3 { fill: #FFFBEB !important; }
+  .task-type-4 { fill: #ECFDF5 !important; }
+  .task-type-5 { fill: #ECFEFF !important; }
+  g[class*="section-type"] &gt; rect,
+  .section-type-0, .section-type-1, .section-type-2,
+  .section-type-3, .section-type-4, .section-type-5 {
+    stroke-width: 0 !important;
+  }
+  .journey-section text {
+    font-weight: 700 !important;
+    font-size: 15px !important;
+    fill: #0F172A !important;
+    letter-spacing: -0.1px !important;
+  }
+
+  /* ===== gantt ===== */
+  /* 背景のグレーを消し、セクションごとに淡いパステル帯を敷く */
+  .mermaid &gt; svg &gt; g &gt; rect:first-child,
+  rect.background,
+  rect.sectionBar {
+    fill: #FFFFFF !important;
+    stroke: transparent !important;
+  }
+  rect.section0, rect.section2,
+  g.section0 rect.section, g.section2 rect.section {
+    fill: #EEF2FF !important;
+  }
+  rect.section1, rect.section3,
+  g.section1 rect.section, g.section3 rect.section {
+    fill: #FDF2F8 !important;
+  }
+  .grid .tick line {
+    stroke: #E2E8F0 !important;
+    stroke-dasharray: 2 3 !important;
+  }
+  .grid path { stroke: transparent !important; }
+  .grid text {
+    fill: #64748B !important;
+    font-size: 11px !important;
+  }
+  /* タスクバー: ソフトなパステルに */
+  .task0, .task2 { fill: #C7D2FE !important; stroke: #818CF8 !important; }
+  .task1, .task3 { fill: #DDD6FE !important; stroke: #A78BFA !important; }
+  .task-type-0, .task-type-1, .task-type-2, .task-type-3,
+  rect.task0, rect.task1, rect.task2, rect.task3 {
+    stroke-width: 1px !important;
+    rx: 6 !important;
+    ry: 6 !important;
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.06));
+  }
+  .done0, .done1, .done2, .done3 {
+    fill: #A7F3D0 !important;
+    stroke: #34D399 !important;
+  }
+  .crit0, .crit1, .crit2, .crit3,
+  .active0, .active1, .active2, .active3 {
+    fill: #FECACA !important;
+    stroke: #F87171 !important;
+  }
+  .taskText, .taskTextOutsideRight, .taskTextOutsideLeft {
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    fill: #0F172A !important;
+  }
+  .sectionTitle0, .sectionTitle1, .sectionTitle2, .sectionTitle3,
+  text.sectionTitle {
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    fill: #0F172A !important;
+  }
+  line.today {
+    stroke: #F43F5E !important;
+    stroke-width: 2px !important;
+    stroke-dasharray: 4 4 !important;
+  }
+
+  /* ===== gitgraph ===== */
+  .branch-label rect, .commit-label rect, .tag-label rect {
+    rx: 8 !important;
+    ry: 8 !important;
+    stroke-width: 0 !important;
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.08));
+  }
+  .branch-label text {
+    font-weight: 600 !important;
+    fill: #FFFFFF !important;
+  }
+  .tag-label text {
+    font-weight: 600 !important;
+    font-size: 12px !important;
+  }
+  .commit-label text {
+    font-size: 11px !important;
+    fill: #334155 !important;
+  }
+  /* ブランチ線を立体的に */
+  .branch0, .branch1, .branch2, .branch3,
+  .branch4, .branch5, .branch6, .branch7 {
+    stroke-width: 4px !important;
+    stroke-linecap: round !important;
+  }
+  /* コミット点 */
+  circle.commit, .commit {
+    stroke-width: 3px !important;
+    stroke: #FFFFFF !important;
+  }
+</style></svg>
