@@ -113,11 +113,11 @@ module Sashiko
         end
         base.prepend(Serialization)
         base.around_perform do |_job, block|
-          carrier = instance_variable_defined?(:@__sashiko_trace_carrier) ? @__sashiko_trace_carrier : nil
-          if carrier && !carrier.empty?
-            Sashiko::Context.attach(carrier) { block.call }
-          else
+          carrier = (instance_variable_defined?(:@__sashiko_trace_carrier) ? @__sashiko_trace_carrier : {}) #: Hash[String, String]
+          if carrier.empty?
             block.call
+          else
+            Sashiko::Context.attach(carrier) { block.call }
           end
         end
       end

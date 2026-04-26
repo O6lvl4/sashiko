@@ -38,3 +38,21 @@ module Ruby
     def load: (String) -> untyped
   end
 end
+
+# Minimal stubs for the slice of ActiveSupport / ActiveJob that
+# Sashiko::Rails actually touches. We do NOT aim to type-check Rails;
+# we declare just enough so Steep can verify our integration code.
+
+module ActiveSupport
+  module Notifications
+    def self.subscribe: (Regexp | String pattern) { (String name, Time start, Time finish, String id, Hash[untyped, untyped] payload) -> void } -> untyped
+  end
+end
+
+module ActiveJob
+  class Base
+    def self.around_perform: () { (ActiveJob::Base job, Proc proc) [self: ActiveJob::Base] -> void } -> untyped
+    def serialize: () -> Hash[String, untyped]
+    def deserialize: (Hash[String, untyped] job_data) -> void
+  end
+end

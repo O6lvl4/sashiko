@@ -43,12 +43,20 @@ across queue backends, and bridging custom
   deserialize, perform inheritance, no-carrier fallback), and install!.
 
 ### Changed
-- `Steepfile`: `lib/sashiko/rails.rb` is excluded from Steep's narrow
-  type checking. Adding RBS for ActiveSupport / ActiveJob is out of
-  scope for this gem; behavior is covered by `test/rails_test.rb`
-  instead.
 - Gemfile dev group adds `activesupport` and `activejob` (`>= 7.0`)
   for the new test suite.
+- `sig/external.rbs`: minimal hand-written stubs for the slice of
+  `ActiveSupport::Notifications` and `ActiveJob::Base` that
+  Sashiko::Rails actually touches (no Rails type-check goal — just
+  enough so Steep verifies our integration).
+- `sig/sashiko/rails.rbs`: full RBS for the new Rails module,
+  including a self-typed `TracedJob::Serialization : ActiveJob::Base`
+  so `super` in the prepended `serialize` / `deserialize` resolves
+  correctly.
+- `lib/sashiko/rails.rb` carries a single `#: Hash[String, String]`
+  inline annotation for the carrier read in `around_perform`. Other
+  than that, no Steep cosmetic compromises — `lib/sashiko/rails.rb`
+  is fully type-checked.
 
 ## [0.1.0] - 2026-04-26
 

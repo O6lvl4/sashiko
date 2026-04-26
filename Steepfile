@@ -1,11 +1,6 @@
 target :lib do
   signature "sig"
   check "lib"
-  # Rails integration touches ActiveSupport / ActiveJob types that
-  # would require pulling in rbs_rails or hand-writing extensive
-  # signatures. Skip the file from Steep's narrow type checking;
-  # tests cover the integration behaviorally.
-  ignore "lib/sashiko/rails.rb"
 
   library "pathname", "logger", "json"
 

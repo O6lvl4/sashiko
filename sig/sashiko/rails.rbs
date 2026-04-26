@@ -1,0 +1,25 @@
+module Sashiko
+  module Rails
+    def self.async: (String | Symbol name, ?kind: Symbol, ?attributes: Hash[String, untyped]?, ?tracer: untyped?) { () -> void } -> Thread
+    def self.bridge_notifications: (Regexp | String pattern, ?tracer: untyped?) -> untyped
+    def self.install!: (?notifications: (Regexp | String)?, ?tracer: untyped?) -> bool
+
+    private
+
+    def self.stringify_payload: (untyped payload) -> Hash[String, untyped]
+
+    module TracedJob
+      CARRIER_KEY: String
+
+      # Prepended onto an ActiveJob::Base subclass; uses `super` to
+      # delegate to ActiveJob's own serialize/deserialize. The self-type
+      # tells Steep the methods can be called against an ActiveJob.
+      module Serialization : ActiveJob::Base
+        def serialize: () -> Hash[String, untyped]
+        def deserialize: (Hash[String, untyped] job_data) -> void
+      end
+
+      def self.included: (Class base) -> void
+    end
+  end
+end
