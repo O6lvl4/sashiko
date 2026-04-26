@@ -6,6 +6,13 @@ This project does not yet follow SemVer; the API is unstable until 1.0.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-04-26
+
+First public release on RubyGems. Headline: concurrency-boundary
+observability for Ruby on top of OpenTelemetry — Thread / Fiber / queue
+/ Ractor handoffs that vanilla OTel drops, plus a declarative `trace`
+DSL and `tracer:` DI for Box-aware multi-tenancy.
+
 ### Added — RubyKaigi readiness
 - `examples/talk/01..07_*.rb`: 7-step talk-arc demo sequence taking
   the audience from "vanilla OTel works on sequential code" through
