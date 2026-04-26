@@ -45,7 +45,22 @@ the multi-tenant case.
   empirical evaluation of whether Ruby refinements could replace
   Sashiko's `Module#prepend`-based DSL. Conclusion: no, and the file
   documents why with 6 numbered scenarios and PASS / FAIL output. See
-  `CHANGELOG.md` "Design notes" for the summary.
+  [`docs/refinements_evaluated.md`](../docs/refinements_evaluated.md)
+  for the long-form write-up.
+
+## Talk arc — slide-friendly demo sequence
+
+Numbered scripts under [`talk/`](talk/) progressing from "vanilla OTel
+works" to "Ractor needs span replay". Each is < 50 lines so a single
+file fits on a slide.
+
+1. [`talk/01_baseline.rb`](talk/01_baseline.rb) — sequential, no boundary, vanilla OTel works.
+2. [`talk/02_thread_orphans.rb`](talk/02_thread_orphans.rb) — `Thread.new` produces orphan spans.
+3. [`talk/03_thread_stitched.rb`](talk/03_thread_stitched.rb) — `Sashiko::Context.parallel_map` keeps the trace stitched.
+4. [`talk/04_ractor_isolation_error.rb`](talk/04_ractor_isolation_error.rb) — vanilla OTel raises `Ractor::IsolationError` inside a Ractor.
+5. [`talk/05_ractor_span_replay.rb`](talk/05_ractor_span_replay.rb) — Sashiko's solution: SpanEvent record + main-side replay.
+6. [`talk/06_box_otel_pollution.rb`](talk/06_box_otel_pollution.rb) — `Sashiko.tracer` × `Ruby::Box`. Requires `RUBY_BOX=1`.
+7. [`talk/07_tracer_di.rb`](talk/07_tracer_di.rb) — DI escape hatch routing two services to two providers.
 
 ## Quick reference
 

@@ -6,6 +6,36 @@ This project does not yet follow SemVer; the API is unstable until 1.0.
 
 ## [Unreleased]
 
+### Added — RubyKaigi readiness
+- `examples/talk/01..07_*.rb`: 7-step talk-arc demo sequence taking
+  the audience from "vanilla OTel works on sequential code" through
+  "Ractor::IsolationError" to "Sashiko span replay" and `tracer:` DI.
+  Each script is slide-sized (< 50 LOC).
+- `bench/`: three benchmark scripts (`traced_overhead.rb`,
+  `ractor_replay_throughput.rb`, `sink_replay_cost.rb`) measuring
+  `Sashiko::Traced` overhead, `Sashiko::Ractor.parallel_map` speedup,
+  and main-side `Sink.replay` cost. Aggregated results in
+  `docs/benchmarks.md`.
+- Companion long-form docs under `docs/`:
+  - `ractor_span_replay.md` — design walkthrough of the SpanEvent
+    record-and-replay mechanism, including the wall-clock /
+    monotonic anchor design and honest preservation caveats.
+  - `box_otel_interaction.md` — corrected diagnosis of the
+    `Sashiko.tracer` × Ruby::Box interaction. The reproducer in
+    `examples/talk/06_box_otel_pollution.rb` shows that Ruby::Box
+    *does* isolate `OpenTelemetry.tracer_provider`; the real cause
+    is the `respond_to?(:tracer)` guard preventing method
+    redefinition inside the box.
+  - `refinements_evaluated.md` — design doc for why Ruby refinements
+    cannot replace `Module#prepend` here (3 of 6 scenarios fail,
+    including the production-realistic external-dispatcher case).
+  - `cfp.md` — RubyKaigi talk submission draft (title, abstract,
+    outline, demo references, empirical claims).
+- `Sashiko::VERSION` bumped to **0.1.0**. Gem builds successfully
+  with the updated metadata; ready for `gem push`.
+
+
+
 ### Changed
 - `Sashiko::Box.new` now bootstraps Sashiko inside the Box. The previous
   `Sashiko::Box.new_with_sashiko` helper has been removed; for a bare
@@ -29,14 +59,22 @@ This project does not yet follow SemVer; the API is unstable until 1.0.
 - Steep / RBS bumped to `>= 2.0` / `>= 4.0` (was `~> 1.9` / `~> 3.10`).
   Type-checking still clean.
 
-### Documented (unchanged from earlier behavior)
-- `Sashiko.tracer` is memoized to main's tracer on first call. Removing
-  the memoization was attempted to make Box-internal calls "just work",
-  but Ruby::Box does not isolate the `OpenTelemetry` module's state, so
-  any in-Box `OpenTelemetry::SDK.configure` would also flip main's
-  resolved tracer mid-process. The pitfall note in the Box section now
-  spells this out: inside a Box, call
-  `OpenTelemetry.tracer_provider.tracer(...)` directly.
+### Diagnosis correction (Box × Sashiko.tracer)
+Earlier notes claimed Ruby::Box "does not isolate the OpenTelemetry
+module's state". A direct reproducer
+([`examples/talk/06_box_otel_pollution.rb`](examples/talk/06_box_otel_pollution.rb))
+shows that's wrong: `OpenTelemetry.tracer_provider` IS box-isolated
+(different `object_id` in main vs inside a Box, even after the box
+runs `OpenTelemetry::SDK.configure`).
+
+The actual reason `Sashiko.tracer` returns main's tracer when called
+from inside a Box is the `respond_to?(:tracer)` guard at require time.
+Sashiko is a shared module; without the guard, the box's re-evaluation
+of `lib/sashiko.rb` would rebind the method's constant resolution to
+the box's scope, leaking back into main. With the guard, the method
+stays anchored to main's OpenTelemetry. The "use a Box-local tracer
+explicitly" recommendation is unchanged, but the explanation in the
+README and code comments is now accurate.
 
 ### API consistency
 - `Sashiko::Adapters::Anthropic.instrument!` now always returns the

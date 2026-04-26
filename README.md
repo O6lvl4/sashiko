@@ -87,10 +87,14 @@ adapters use `Data.define` and other 3.2+ idioms.
 
 ```ruby
 # Gemfile
-gem "sashiko", github: "O6lvl4/sashiko"
+gem "sashiko", "~> 0.1"
 gem "opentelemetry-sdk"
 gem "opentelemetry-exporter-otlp"
 ```
+
+(While `0.x.x`, expect the API to change. Pin to a patch version if
+you want zero surprises. Pre-1.0 follows Keep-a-Changelog style — see
+[`CHANGELOG.md`](CHANGELOG.md) for migration notes between releases.)
 
 ```ruby
 # config/initializers/otel.rb
@@ -285,11 +289,17 @@ inside. It raises `NotEnabledError` if the process wasn't started with
 `RUBY_BOX=1`. For a bare box without Sashiko, use `Ruby::Box.new`
 directly.
 
-> **Inside a Box, pass a `tracer:` explicitly.** Ruby::Box does not
-> isolate the OpenTelemetry module's state, so `Sashiko.tracer` is
-> memoized to main's tracer to keep main predictable. Every place
-> Sashiko emits a span accepts an explicit `tracer:` that bypasses the
-> default lookup:
+> **Inside a Box, pass a `tracer:` explicitly.** Ruby::Box does isolate
+> `OpenTelemetry.tracer_provider` (each Box has its own object). The
+> reason `Sashiko.tracer` doesn't follow it is that the method is
+> defined under a `respond_to?(:tracer)` guard at require time — when
+> sashiko is re-required inside a Box, the guard skips redefinition,
+> so the existing method body (whose constant resolution scope was
+> main's) keeps returning main's tracer. The behavior is reproducible
+> in [`examples/talk/06_box_otel_pollution.rb`](examples/talk/06_box_otel_pollution.rb).
+>
+> Every place Sashiko emits a span accepts an explicit `tracer:` that
+> bypasses the default lookup:
 >
 > ```ruby
 > tracer = OpenTelemetry.tracer_provider.tracer("my-component")
