@@ -12,8 +12,8 @@ class TreeExporter
   def shutdown(timeout: nil);    OpenTelemetry::SDK::Trace::Export::SUCCESS; end
 
   def dump
-    by_parent = @spans.group_by { _1.parent_span_id.unpack1("H*") }
-    root_spans = @spans.select { _1.parent_span_id.unpack1("H*") == ("0" * 16) }
+    by_parent = @spans.group_by { it.parent_span_id.unpack1("H*") }
+    root_spans = @spans.select { it.parent_span_id.unpack1("H*") == ("0" * 16) }
     root_spans.each { |r| print_tree(r, by_parent, 0) }
   end
 
@@ -66,6 +66,6 @@ Sashiko.tracer.in_span("main.batch", attributes: { "workers" => 3 }) do
 end
 
 puts "━" * 70
-puts " Trace tree (spans that never existed in vanilla OTel Ruby)"
+puts " Trace tree"
 puts "━" * 70
 exporter.dump

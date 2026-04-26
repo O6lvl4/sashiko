@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Sashiko
   module Adapters
     # Auto-instrumentation for Anthropic Ruby SDK (or any duck-typed client
@@ -13,6 +15,10 @@ module Sashiko
       # frozen and Ractor-shareable by default.
       Price = Data.define(:input, :output, :cache_write, :cache_read)
 
+      # Snapshot as of 2026-04. Anthropic adds and retires models on its
+      # own schedule and this table will go stale; override at runtime via
+      # `Sashiko::Adapters::Anthropic.pricing = { ... }` when that happens.
+      # The cost attribute is silently skipped for models not in this Hash.
       DEFAULT_PRICING = ::Ractor.make_shareable({
         "claude-opus-4-7"   => Price.new(input: 15.00, output: 75.00, cache_write: 18.75, cache_read: 1.50),
         "claude-sonnet-4-6" => Price.new(input:  3.00, output: 15.00, cache_write:  3.75, cache_read: 0.30),
@@ -24,10 +30,20 @@ module Sashiko
 
         def pricing = @pricing ||= DEFAULT_PRICING
 
-        def instrument!(messages_class)
-          return if messages_class.instance_variable_get(:@__sashiko_instrumented)
-          messages_class.prepend(Wrapper)
-          messages_class.instance_variable_set(:@__sashiko_instrumented, true)
+        # Idempotent: prepends Wrapper once per class, then returns the
+        # class on every call so callers can chain and so a re-invocation
+        # is a safe no-op rather than a silent nil.
+        #
+        # Pass tracer: to bind this instrumentation to a specific tracer
+        # (e.g. a Ruby::Box-local tracer). Subsequent re-invocations with
+        # a different tracer overwrite the previous binding so callers
+        # can rebind without re-prepending.
+        def instrument!(messages_class, tracer: nil)
+          unless messages_class.instance_variable_get(:@__sashiko_instrumented)
+            messages_class.prepend(Wrapper)
+            messages_class.instance_variable_set(:@__sashiko_instrumented, true)
+          end
+          messages_class.instance_variable_set(:@__sashiko_tracer, tracer)
           messages_class
         end
 
@@ -45,34 +61,48 @@ module Sashiko
         #
         #   # Main process's Anthropic::Messages remains untouched.
         def instrument_in_box!(box, messages_class_name)
-          unless defined?(::Ruby::Box) && ::Ruby::Box.enabled?
-            raise "Ruby::Box is not enabled. Start Ruby with RUBY_BOX=1."
-          end
+          raise Sashiko::Box::NotEnabledError unless Sashiko::Box.enabled?
+          # When OpenTelemetry is loaded inside the box, bind to the
+          # box-local tracer explicitly so Wrapper doesn't fall back to
+          # main's Sashiko.tracer. If OTel isn't loaded yet, fall through
+          # with tracer: nil — Wrapper will resolve at call time, by
+          # which point the caller has typically configured OTel.
           box.eval(<<~RUBY)
             require "sashiko/adapters/anthropic"
-            Sashiko::Adapters::Anthropic.instrument!(Object.const_get(#{messages_class_name.inspect}))
+            klass = Object.const_get(#{messages_class_name.inspect})
+            local_tracer = defined?(::OpenTelemetry) ?
+              ::OpenTelemetry.tracer_provider.tracer("sashiko/anthropic") : nil
+            Sashiko::Adapters::Anthropic.instrument!(klass, tracer: local_tracer)
           RUBY
         end
 
+        # Map of response key to span attribute name. Iterating this once
+        # is clearer than four near-identical case/in stanzas.
+        RESPONSE_ATTRS = {
+          id:    "gen_ai.response.id",
+          model: "gen_ai.response.model",
+        }.freeze
+
+        USAGE_ATTRS = {
+          input_tokens:                "gen_ai.usage.input_tokens",
+          output_tokens:               "gen_ai.usage.output_tokens",
+          cache_creation_input_tokens: "gen_ai.anthropic.cache_creation_input_tokens",
+          cache_read_input_tokens:     "gen_ai.anthropic.cache_read_input_tokens",
+        }.freeze
+
         def record_response(span, response)
-          case response
-          in { usage: Hash => usage }
+          if (usage = response[:usage]).is_a?(Hash)
             set_usage_attributes(span, usage)
             set_cost(span, response[:model], usage)
             set_cache_hit_ratio(span, usage)
-          else
           end
 
-          case response
-          in { id: id }       then span.set_attribute("gen_ai.response.id", id)
-          else
+          RESPONSE_ATTRS.each do |key, attr|
+            response[key]&.then { |v| span.set_attribute(attr, v) }
           end
-          case response
-          in { model: model } then span.set_attribute("gen_ai.response.model", model)
-          else
-          end
-          case response
-          in { stop_reason: (String | Symbol) => reason }
+
+          case response[:stop_reason]
+          in String | Symbol => reason
             span.set_attribute("gen_ai.response.finish_reasons", [reason.to_s])
           else
           end
@@ -81,21 +111,9 @@ module Sashiko
         private
 
         def set_usage_attributes(span, usage)
-          case usage
-          in { input_tokens: Integer => n } then span.set_attribute("gen_ai.usage.input_tokens", n)
-          else
-          end
-          case usage
-          in { output_tokens: Integer => n } then span.set_attribute("gen_ai.usage.output_tokens", n)
-          else
-          end
-          case usage
-          in { cache_creation_input_tokens: Integer => n } then span.set_attribute("gen_ai.anthropic.cache_creation_input_tokens", n)
-          else
-          end
-          case usage
-          in { cache_read_input_tokens: Integer => n } then span.set_attribute("gen_ai.anthropic.cache_read_input_tokens", n)
-          else
+          USAGE_ATTRS.each do |key, attr|
+            n = usage[key]
+            span.set_attribute(attr, n) if n.is_a?(Integer)
           end
         end
 
@@ -133,7 +151,8 @@ module Sashiko
           attrs["gen_ai.request.temperature"] = params[:temperature] if params.key?(:temperature)
           attrs["gen_ai.request.top_p"]       = params[:top_p]       if params.key?(:top_p)
 
-          Sashiko.tracer.in_span("chat #{params[:model]}", attributes: attrs, kind: :client) do |span|
+          tracer = self.class.instance_variable_get(:@__sashiko_tracer) || Sashiko.tracer
+          tracer.in_span("chat #{params[:model]}", attributes: attrs, kind: :client) do |span|
             response = super(**params)
             Anthropic.record_response(span, response)
             response

@@ -1,18 +1,21 @@
+# frozen_string_literal: true
+
 module Sashiko
-  # Ractor-based parallel execution with world-first Ractor span emission.
+  # Ractor-based parallel execution with span replay.
   #
-  # The core problem: OpenTelemetry Ruby cannot emit spans inside a Ractor
+  # The problem: OpenTelemetry Ruby cannot emit spans inside a Ractor
   # because its module state carries unshareable instance variables
   # (mutexes, propagation). Upstream OTel has acknowledged this as a
   # blocker for Ractor adoption.
   #
-  # Sashiko's workaround: inside the Ractor, record spans as plain
-  # frozen Data values (no OTel dependency), send them via Ractor::Port
-  # to the main Ractor, and *replay* them there as real OTel spans with
-  # their original start/end timestamps and correct parent linkage.
+  # The workaround: inside the Ractor, record spans as plain frozen
+  # Data values (no OTel dependency), send them via Ractor::Port to the
+  # main Ractor, and *replay* them there as real OTel spans with their
+  # original start/end timestamps and parent linkage.
   #
-  # From the trace consumer's perspective, the result is indistinguishable
-  # from spans that were emitted directly inside the Ractor.
+  # Caveats: trace_id / span_id are assigned at replay time on the main
+  # side; OpenTelemetry::Baggage set inside the Ractor is not propagated
+  # out; sampling decisions happen at replay time.
   module Ractor
     class NonShareableReceiverError < ArgumentError; end
 
@@ -23,10 +26,17 @@ module Sashiko
     # In-Ractor recorder that collects SpanEvents. One instance per worker
     # Ractor, accessed via Recorder.current (thread-local inside the Ractor).
     class Recorder
+      # Take a wall-clock anchor once at recorder construction, then drive
+      # all per-span timestamps from the monotonic clock relative to that
+      # anchor. This gives OTel the wall-clock timestamps it expects while
+      # keeping span durations immune to NTP / system-time jumps that hit
+      # mid-batch.
       def initialize
-        @events  = [] #: Array[SpanEvent]
-        @stack   = [] #: Array[Integer]
-        @next_id = 0
+        @events       = [] #: Array[SpanEvent]
+        @stack        = [] #: Array[Integer]
+        @next_id      = 0
+        @wall_anchor  = Process.clock_gettime(Process::CLOCK_REALTIME,  :nanosecond)
+        @mono_anchor  = Process.clock_gettime(Process::CLOCK_MONOTONIC, :nanosecond)
       end
 
       attr_reader :events
@@ -61,12 +71,14 @@ module Sashiko
         ::Thread.current[:sashiko_recorder] = nil
         empty = [] #: Array[SpanEvent]
         events = r ? r.events : empty
-        events.map { ::Ractor.make_shareable(_1) }.freeze
+        events.map { |e| ::Ractor.make_shareable(e) }.freeze
       end
 
       private
 
-      def now_ns = Process.clock_gettime(Process::CLOCK_REALTIME, :nanosecond)
+      def now_ns
+        @wall_anchor + (Process.clock_gettime(Process::CLOCK_MONOTONIC, :nanosecond) - @mono_anchor)
+      end
 
       def deep_freeze(hash)
         acc = {} #: Hash[String, untyped]
@@ -76,8 +88,9 @@ module Sashiko
 
     class << self
       # Record a nested span inside a Ractor worker. Produces a SpanEvent
-      # that will be replayed as an OTel span on the main Ractor. Works
-      # exactly like tracer.in_span, but without the OTel runtime.
+      # that will be replayed as an OTel span on the main Ractor. The API
+      # mirrors tracer.in_span, but it runs without the OTel runtime —
+      # see the module-level caveats about trace_id, baggage, and sampling.
       #
       #   module Compute
       #     def self.run(n)
@@ -93,7 +106,7 @@ module Sashiko
       # back via Ractor::Port and replayed on the main Ractor under the
       # current trace context — so the whole tree shows up as children of
       # the span wrapping this parallel_map call.
-      def parallel_map(items, via:)
+      def parallel_map(items, via:, tracer: nil)
         raise ArgumentError, "via: must be a Method object" unless via.is_a?(Method)
         receiver    = via.receiver
         method_name = via.name
@@ -103,6 +116,9 @@ module Sashiko
         end
         root_name = "#{receiver}.#{method_name}"
         carrier   = Sashiko::Context.carrier
+        # Resolve once on the main side so every replayed batch lands on
+        # the same tracer (Box-local if the caller passed one).
+        emit_tracer = tracer || Sashiko.tracer
 
         ports = items.each_with_index.map do |item, i|
           port = ::Ractor::Port.new
@@ -126,7 +142,7 @@ module Sashiko
         errors  = [] #: Array[String]
         ports.size.times do
           idx, value, events, error = ports.shift.receive
-          Sink.replay(events, parent_carrier: carrier)
+          Sink.replay(events, parent_carrier: carrier, tracer: emit_tracer)
           if error
             errors << "item[#{idx}]: #{error}"
           else
@@ -143,20 +159,23 @@ module Sashiko
     # correct parent chain.
     module Sink
       class << self
-        def replay(events, parent_carrier:)
+        def replay(events, parent_carrier:, tracer: nil)
           return if events.empty?
+          tracer ||= Sashiko.tracer
           parent_ctx = OpenTelemetry.propagation.extract(parent_carrier)
           replayed = {} #: Hash[Integer, untyped]
 
           events.sort_by(&:id).each do |event|
             ctx = if event.parent_id.nil?
                     parent_ctx
+                  elsif (parent = replayed[event.parent_id])
+                    OpenTelemetry::Trace.context_with_span(parent)
                   else
-                    OpenTelemetry::Trace.context_with_span(replayed.fetch(event.parent_id))
+                    parent_ctx
                   end
 
             OpenTelemetry::Context.with_current(ctx) do
-              span = Sashiko.tracer.start_span(
+              span = tracer.start_span(
                 event.name,
                 kind: event.kind,
                 attributes: event.attributes,

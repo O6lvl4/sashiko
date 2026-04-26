@@ -30,7 +30,7 @@ class RactorSpanReplayTest < Minitest::Test
       Sashiko::Ractor.parallel_map([1, 2, 3], via: ReplayWork.method(:flat))
     end
 
-    worker_spans = @exporter.finished_spans.select { _1.name == "ReplayWork.flat" }
+    worker_spans = @exporter.finished_spans.select { it.name == "ReplayWork.flat" }
     assert_equal 3, worker_spans.length, "expected one worker span per input item"
     worker_spans.each do |s|
       assert_equal parent_trace_id, s.trace_id,
@@ -46,7 +46,7 @@ class RactorSpanReplayTest < Minitest::Test
     end
 
     @exporter.finished_spans
-      .select { _1.name == "ReplayWork.flat" }
+      .select { it.name == "ReplayWork.flat" }
       .each { |s| assert_equal parent_span_id, s.parent_span_id }
   end
 
@@ -56,9 +56,9 @@ class RactorSpanReplayTest < Minitest::Test
     end
 
     spans  = @exporter.finished_spans
-    root   = spans.find { _1.name == "ReplayWork.with_nested" }
-    fetch  = spans.find { _1.name == "phase.fetch"   }
-    compute = spans.find { _1.name == "phase.compute" }
+    root   = spans.find { it.name == "ReplayWork.with_nested" }
+    fetch  = spans.find { it.name == "phase.fetch"   }
+    compute = spans.find { it.name == "phase.compute" }
     assert root && fetch && compute
 
     # Nested spans recorded inside the Ractor should reconstruct as direct
@@ -73,18 +73,34 @@ class RactorSpanReplayTest < Minitest::Test
     # The worker sleeps for a known amount. The replayed span's duration
     # must match that (not the replay time in the main thread).
     Sashiko::Ractor.parallel_map([1], via: ReplayWork.method(:slow))
-    s = @exporter.finished_spans.find { _1.name == "ReplayWork.slow" }
+    s = @exporter.finished_spans.find { it.name == "ReplayWork.slow" }
     assert s
     duration_ms = (s.end_timestamp - s.start_timestamp) / 1_000_000.0
     assert_in_delta 50, duration_ms, 30,
       "replayed span duration must match actual work inside the Ractor (got #{duration_ms}ms)"
   end
 
+  def test_explicit_tracer_routes_replayed_spans_to_alternate_provider
+    alt_exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+    alt_provider = OpenTelemetry::SDK::Trace::TracerProvider.new
+    alt_provider.add_span_processor(
+      OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(alt_exporter)
+    )
+    alt_tracer = alt_provider.tracer("alt")
+
+    Sashiko::Ractor.parallel_map([1, 2], via: ReplayWork.method(:flat), tracer: alt_tracer)
+
+    assert_equal 2, alt_exporter.finished_spans.length,
+      "replayed spans must land on the explicit tracer's provider"
+    assert_empty @exporter.finished_spans.select { |s| s.name == "ReplayWork.flat" },
+      "default exporter must not see spans routed through an explicit tracer"
+  end
+
   def test_attributes_on_root_worker_span_include_item_index
     Sashiko::Ractor.parallel_map([100, 200, 300], via: ReplayWork.method(:flat))
     indices = @exporter.finished_spans
-      .select { _1.name == "ReplayWork.flat" }
-      .map    { _1.attributes["item.index"] }
+      .select { it.name == "ReplayWork.flat" }
+      .map    { it.attributes["item.index"] }
       .sort
     assert_equal [0, 1, 2], indices
   end

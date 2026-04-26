@@ -30,15 +30,15 @@ class BoxTest < Minitest::Test
   end
 
   def test_sashiko_box_helpers_bootstrap_isolated_sashiko
-    box = Sashiko::Box.new_with_sashiko
+    box = Sashiko::Box.new
     # The box has its own Sashiko constant, separate object from main's.
     box_has_sashiko = box.eval("defined?(Sashiko::Traced)")
     assert_equal "constant", box_has_sashiko
   end
 
   def test_two_boxes_have_isolated_state
-    box_a = Sashiko::Box.new_with_sashiko
-    box_b = Sashiko::Box.new_with_sashiko
+    box_a = Sashiko::Box.new
+    box_b = Sashiko::Box.new
 
     box_a.eval("module BoxA_OnlyMarker; end")
     box_b.eval("module BoxB_OnlyMarker; end")
@@ -53,10 +53,6 @@ class BoxTest < Minitest::Test
   end
 
   def test_multi_tenant_exporters_do_not_cross_contaminate
-    # Inside a Box, use the box-local OpenTelemetry tracer directly rather
-    # than Sashiko.tracer — Sashiko's tracer method is defined in main's
-    # constant scope and wouldn't resolve to the box's OTel. This is the
-    # expected pattern when working inside a Box.
     tenant_setup = ->(label) {
       <<~RUBY
         require "opentelemetry/sdk"
@@ -71,11 +67,12 @@ class BoxTest < Minitest::Test
         TENANT_EXPORTER.finished_spans.map { |s| s.attributes["tenant"] }
       RUBY
     }
-    a_tenants = Sashiko::Box.new_with_sashiko.eval(tenant_setup.call("alice"))
-    b_tenants = Sashiko::Box.new_with_sashiko.eval(tenant_setup.call("bob"))
+    a_tenants = Sashiko::Box.new.eval(tenant_setup.call("alice"))
+    b_tenants = Sashiko::Box.new.eval(tenant_setup.call("bob"))
     assert_equal ["alice"], a_tenants
     assert_equal ["bob"],   b_tenants
   end
+
 
   private
 

@@ -12,14 +12,14 @@
 #   * Tenant A's spans stay in Tenant A's exporter. Tenant B's spans stay
 #     in Tenant B's exporter. Main process's world is never touched.
 #
-# This is not achievable with vanilla Ruby — monkey-patches like `prepend`
-# are inherently global. Ruby 4.0's Box lifts that limitation.
+# Vanilla `prepend` is process-global, so two tenants in one process
+# can't independently instrument the same class. Ruby 4.0's Box lifts
+# that limitation by giving each Box its own loading namespace.
 #
-# IMPORTANT: inside a Box, use OpenTelemetry's tracer directly rather than
-# Sashiko.tracer. The latter's method body was defined in main's constant
-# scope, so it resolves OpenTelemetry to main's SDK instance (which is
-# likely unconfigured). Box-local spans should go through the box-local
-# OpenTelemetry::SDK.configure result.
+# IMPORTANT: inside a Box, use OpenTelemetry's tracer directly rather
+# than Sashiko.tracer. Ruby::Box does not isolate OpenTelemetry's module
+# state, so Sashiko.tracer is memoized to main's tracer on first call.
+# Reach the box-local SDK via OpenTelemetry.tracer_provider.tracer(...).
 
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
 require "sashiko"
@@ -71,10 +71,10 @@ end
 
 # -----------------------------------------------------------------------
 
-tenant_a_box = Sashiko::Box.new_with_sashiko
+tenant_a_box = Sashiko::Box.new
 tenant_a_spans = tenant_a_box.eval(tenant_setup("tenant-A"))
 
-tenant_b_box = Sashiko::Box.new_with_sashiko
+tenant_b_box = Sashiko::Box.new
 tenant_b_spans = tenant_b_box.eval(tenant_setup("tenant-B"))
 
 # -----------------------------------------------------------------------
@@ -104,5 +104,4 @@ puts "  tenant-B sees tenant-A's TENANT_EXPORTER? #{
 
 puts
 puts "Result: main is pristine, both tenants have their own Anthropic class,"
-puts "OTel SDK, and exporter. Spans never cross boundaries."
-puts "One process, N observability planes — that's what Ruby::Box buys you."
+puts "OTel SDK, and exporter. Spans stay in their own Box."

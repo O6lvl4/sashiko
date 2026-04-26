@@ -89,4 +89,77 @@ class TracedTest < Minitest::Test
     refute_includes names, "Handlers#private_helper",
       "trace_all should only match methods whose name matches the pattern"
   end
+
+  def test_trace_all_skips_methods_already_traced_directly
+    # A method explicitly traced by `trace :foo, attributes: ...` should
+    # NOT be re-overlaid by a subsequent trace_all — that would clobber
+    # the per-method options and double the span emission.
+    klass = Class.new do
+      extend Sashiko::Traced
+      def self.name; "Mixed"; end
+      def handle_a; :a; end
+      def handle_b; :b; end
+      trace :handle_a, attributes: ->(*) { { "explicit" => "yes" } }
+      trace_all matching: /^handle_/
+    end
+
+    klass.new.handle_a
+    spans = @exporter.finished_spans.select { |s| s.name == "Mixed#handle_a" }
+    assert_equal 1, spans.length, "handle_a should produce exactly one span"
+    assert_equal "yes", spans.first.attributes["explicit"],
+      "trace_all must not overwrite the explicit `trace` definition"
+  end
+
+  def test_record_args_and_attributes_proc_combine
+    klass = Class.new do
+      extend Sashiko::Traced
+      def self.name; "Combo"; end
+      trace :work, record_args: true, attributes: ->(x, y:) { { "x" => x, "y" => y } }
+      def work(x, y:); x + y; end
+    end
+
+    klass.new.work(1, y: 2)
+    span = @exporter.finished_spans.last
+    assert_equal 1, span.attributes["x"]
+    assert_equal 2, span.attributes["y"]
+    assert_equal 2, span.attributes["code.args.count"],
+      "record_args should count both positional and keyword args"
+  end
+
+  def test_explicit_tracer_kwarg_overrides_default
+    # Build a second tracer_provider + exporter pair and verify spans
+    # routed through it never touch the default test_helper exporter.
+    alt_exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+    alt_provider = OpenTelemetry::SDK::Trace::TracerProvider.new
+    alt_provider.add_span_processor(
+      OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(alt_exporter)
+    )
+    alt_tracer = alt_provider.tracer("alt")
+
+    klass = Class.new do
+      extend Sashiko::Traced
+      def self.name; "Routed"; end
+      trace :work, tracer: alt_tracer
+      def work; 1; end
+    end
+
+    klass.new.work
+    assert_equal ["Routed#work"], alt_exporter.finished_spans.map(&:name),
+      "spans must be routed through the explicit tracer:"
+    assert_empty @exporter.finished_spans.select { |s| s.name == "Routed#work" },
+      "default tracer must not see spans tagged with an explicit tracer:"
+  end
+
+  def test_attributes_static_hash_is_attached
+    klass = Class.new do
+      extend Sashiko::Traced
+      def self.name; "Static"; end
+      trace :ping, attributes: { "service.kind" => "internal" }
+      def ping; :ok; end
+    end
+
+    klass.new.ping
+    span = @exporter.finished_spans.last
+    assert_equal "internal", span.attributes["service.kind"]
+  end
 end

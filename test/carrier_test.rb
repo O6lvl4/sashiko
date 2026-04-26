@@ -87,4 +87,18 @@ class CarrierTest < Minitest::Test
     assert_equal expected_root, s.parent_span_id,
       "an empty carrier should produce a fresh root span, not crash"
   end
+
+  def test_corrupt_carrier_does_not_crash_and_yields_fresh_root
+    # A malformed traceparent should be ignored by the W3C extractor;
+    # spans inside the attach block should become fresh roots, not raise.
+    tracer = Sashiko.tracer
+    Sashiko::Context.attach({ "traceparent" => "not-a-real-traceparent" }) do
+      tracer.in_span("after_garbage") { }
+    end
+    s = @exporter.finished_spans.find { |sp| sp.name == "after_garbage" }
+    assert s, "span must still be emitted despite corrupt carrier"
+    expected_root = ("\x00" * 8).b
+    assert_equal expected_root, s.parent_span_id,
+      "corrupt traceparent should yield a root span, not propagate fake parent"
+  end
 end

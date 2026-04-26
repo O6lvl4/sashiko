@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Sashiko
   # Helpers for propagating OTel Context across concurrency boundaries.
   #

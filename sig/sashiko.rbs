@@ -3,7 +3,6 @@ module Sashiko
   DEFAULT_TRACER_NAME: String
 
   def self.tracer: () -> untyped
-  def self.tracer=: (untyped) -> untyped
 
   module Traced : Module
     class Options < Data
@@ -13,14 +12,16 @@ module Sashiko
       attr_reader record_args: bool
       attr_reader method_name: Symbol
       attr_reader class_name: String?
+      attr_reader tracer: untyped?
+      attr_reader static_attrs: Hash[String, untyped]
 
-      def self.new: (span_name: String, kind: Symbol, attributes: untyped, record_args: bool, method_name: Symbol, class_name: String?) -> Options
+      def self.new: (span_name: String, kind: Symbol, attributes: untyped, record_args: bool, method_name: Symbol, class_name: String?, tracer: untyped?, static_attrs: Hash[String, untyped]) -> Options
     end
 
     # When `extend Traced`, the extending class gains these as class methods.
     # `self` inside trace / trace_all is the class itself.
-    def trace: (Symbol | String method_name, ?name: String?, ?kind: Symbol, ?attributes: untyped, ?record_args: bool) -> void
-    def trace_all: (matching: Regexp, ?kind: Symbol, ?record_args: bool) -> void
+    def trace: (Symbol | String method_name, ?name: String?, ?kind: Symbol, ?attributes: untyped, ?record_args: bool, ?tracer: untyped?) -> void
+    def trace_all: (matching: Regexp, ?kind: Symbol, ?record_args: bool, ?tracer: untyped?) -> void
 
     def self.overlay_for: (Module klass) -> Module
     def self.install_overlay: (Module klass) -> Module
@@ -45,8 +46,7 @@ module Sashiko
     end
 
     def self.enabled?: () -> bool
-    def self.new: () -> untyped
-    def self.new_with_sashiko: (?lib_path: String) -> untyped
+    def self.new: (?lib_path: String) -> untyped
     def self.default_lib_path: () -> String
   end
 
@@ -84,11 +84,11 @@ module Sashiko
     end
 
     module Sink
-      def self.replay: (Array[SpanEvent] events, parent_carrier: Hash[String, String]) -> void
+      def self.replay: (Array[SpanEvent] events, parent_carrier: Hash[String, String], ?tracer: untyped?) -> void
     end
 
     def self.span: [T] (String name, ?kind: Symbol, ?attributes: Hash[String | Symbol, untyped]?) { () -> T } -> T
-    def self.parallel_map: [I, O] (Array[I] items, via: Method) -> Array[O]
+    def self.parallel_map: [I, O] (Array[I] items, via: Method, ?tracer: untyped?) -> Array[O]
   end
 
   module Adapters
@@ -103,6 +103,8 @@ module Sashiko
       end
 
       DEFAULT_PRICING: Hash[String, Price]
+      RESPONSE_ATTRS: Hash[Symbol, String]
+      USAGE_ATTRS: Hash[Symbol, String]
 
       module Wrapper
         def create: (**untyped) -> untyped
@@ -110,7 +112,7 @@ module Sashiko
 
       def self.pricing: () -> Hash[String, Price]
       def self.pricing=: (Hash[String, Price]) -> Hash[String, Price]
-      def self.instrument!: (Module messages_class) -> Module?
+      def self.instrument!: (Module messages_class, ?tracer: untyped?) -> Module
       def self.instrument_in_box!: (untyped box, String messages_class_name) -> untyped
       def self.record_response: (untyped span, Hash[Symbol | String, untyped] response) -> void
 
@@ -123,7 +125,7 @@ module Sashiko
 
     module Faraday
       class Middleware
-        def initialize: (untyped app) -> void
+        def initialize: (untyped app, ?tracer: untyped?) -> void
         def call: (untyped env) -> untyped
       end
     end
