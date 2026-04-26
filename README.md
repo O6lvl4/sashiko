@@ -1,187 +1,87 @@
 # Sashiko
 
-> Declarative OpenTelemetry for Ruby 4 — with first-class support for
-> **Ractor span emission**, **Ruby::Box multi-tenancy**, and **distributed
-> boundary propagation**.
+**Concurrency-boundary observability for Ruby on top of OpenTelemetry.**
+
+The OTel context is fiber-local. The moment work crosses a Thread, Fiber,
+queue, or Ractor boundary, vanilla OpenTelemetry Ruby drops the trace —
+spans from the spawned work become *root spans*, disconnected from the
+request that started them. Sashiko keeps the trace stitched together
+across every concurrency boundary Ruby has, with a small declarative
+DSL for instrumenting your own code.
 
 [![Test](https://github.com/O6lvl4/sashiko/actions/workflows/test.yml/badge.svg)](https://github.com/O6lvl4/sashiko/actions/workflows/test.yml)
 [![Typecheck](https://github.com/O6lvl4/sashiko/actions/workflows/typecheck.yml/badge.svg)](https://github.com/O6lvl4/sashiko/actions/workflows/typecheck.yml)
 [![Docs](https://github.com/O6lvl4/sashiko/actions/workflows/docs.yml/badge.svg)](https://o6lvl4.github.io/sashiko/)
 
-**API docs**: <https://o6lvl4.github.io/sashiko/>
+API docs: <https://o6lvl4.github.io/sashiko/>
 
-## Why Sashiko
-
-- **World-first: emit OpenTelemetry spans from inside a Ractor.** Vanilla
-  OTel Ruby can't do this — the SDK's module state is not Ractor-shareable.
-  Sashiko records spans as frozen `SpanEvent` data inside the Ractor and
-  **replays them as real OTel spans on the main Ractor** with original
-  timing and parent linkage. See [the Ractor story](#wait-ractors-cant-emit-otel-spans).
-
-- **Cross-boundary trace propagation.** `Sashiko::Context.carrier` returns
-  a deep-frozen, Ractor-shareable Hash of W3C Trace Context headers that
-  survives **Thread, Fiber, Sidekiq queue args, Kafka message attributes,
-  HTTP headers, and `Ractor.new` arguments**. Reconnect the trace on the
-  other side with one `attach` call.
-
-- **Multi-tenant observability via Ruby::Box.** `Sashiko::Box.new_with_sashiko`
-  gives each tenant its own Sashiko, its own OTel tracer provider, its own
-  exporter, and its own instrumented classes — **zero cross-contamination**,
-  all in one process. Full suite runs under `RUBY_BOX=1` in CI.
-
-- **Declarative tracing DSL.** `extend Sashiko::Traced; trace :method_name`
-  replaces `tracer.in_span { ... }` blocks. Exceptions, error status, and
-  attribute procs are handled automatically. Also: `trace_all matching: /regex/`.
-
-- **Ruby 4 native, not decorative.** Built on `Ractor::Port`, `Ruby::Box`,
-  `Data.define`, pattern matching, endless methods, `it` block parameter,
-  `Ractor.make_shareable`, anonymous block forwarding — each applied where
-  it clarifies the code, not for show. Ships RBS signatures, type-checked
-  in CI with Steep.
-
-- **Documented with diagrams, verified with tests, published as a docs
-  site.** 32 tests green in both modes, 0 type errors, 3 Mermaid diagrams
-  rendered via premaid, RDoc auto-deployed to GitHub Pages on every push.
-
-## Wait, Ractors can't emit OTel spans
-
-Yes — in vanilla OpenTelemetry Ruby, they can't. The SDK's module state
-carries unshareable instance variables (mutex, propagation), so any
-`tracer.in_span(...)` call from inside a Ractor raises
-`Ractor::IsolationError`. The OTel Ruby SIG has acknowledged this as a
-blocker for Ractor adoption.
-
-Sashiko works around this with **span replay**: inside the Ractor, work
-is recorded as frozen `SpanEvent` values (no OTel dependency), shipped
-back to the main Ractor via `Ractor::Port`, then re-emitted there as
-real OTel spans with the original timestamps and correct parent
-linkage. From the trace consumer's point of view, the spans look
-exactly as if they were emitted inside the Ractor.
-
-![Ractor span replay sequence](docs/assets/ractor_span_replay.svg)
-
-```
-main.batch (20ms)                              ← main Ractor
-├─ PrimePipeline.run (7.5ms) [item.index=0]    ← ← ← emitted "inside" a Ractor
-│  ├─ enumerate                                ← ← ← nested Ractor-side span
-│  ├─ sieve
-│  └─ summarize
-├─ PrimePipeline.run (13.5ms) [item.index=1]
-│  └─ ...
-└─ PrimePipeline.run (19.7ms) [item.index=2]
-   └─ ...
-```
-
-Run the demo yourself:
-
-```sh
-bundle exec ruby examples/ractor_span_replay_demo.rb
-```
-
-See [the Ractor section](#sashikoractor--true-parallel-execution-with-span-replay-ruby-4)
-for the API.
-
----
-
-Declarative OpenTelemetry instrumentation for Ruby 4, with first-class
-cross-boundary trace context propagation.
+> Status: early. API may change. Tests green in both default and
+> `RUBY_BOX=1` modes; 0 type errors.
 
 Named after *sashiko* (刺し子), a Japanese stitching technique that
-reinforces fabric with small, deliberate stitches — the same way this
-gem weaves small, deliberate spans into the fabric of your code.
+reinforces fabric with small, deliberate stitches.
 
----
-
-## The problem
-
-Plain OpenTelemetry Ruby drops trace context the moment work crosses a
-boundary:
+## The boundary problem
 
 ```
-Without Sashiko:                 With Sashiko:
+Without Sashiko:                          With Sashiko:
 
-[trace A]                         [trace A]
-└─ POST /orders                   └─ POST /orders
-                                     └─ OrderWorker#perform
-[trace B]   ← disconnected 😢        └─ HTTP POST warehouse.com
-└─ OrderWorker#perform               └─ HTTP POST email.com
-   └─ HTTP POST warehouse.com
+[trace A]                                 [trace A]
+└─ POST /orders                           └─ POST /orders
+                                             ├─ external_call
+[trace B]   ← orphan thread span 😢          ├─ external_call
+└─ external_call                             └─ external_call
+[trace C]   ← orphan thread span 😢
+└─ external_call
 ```
 
-Because `OpenTelemetry::Context` lives in fiber-local storage:
+A 30-line runnable demonstration is in
+[`examples/thread_fanout_demo.rb`](examples/thread_fanout_demo.rb).
+It prints both trace trees side-by-side from the same code.
 
-- A span started inside `Thread.new { ... }` becomes a **new root span**.
-- A Sidekiq job has no link to the web request that enqueued it.
-- Wrapping every method in `tracer.in_span("...") do ... end` is
-  verbose and bleeds observability into business logic.
+## What it gives you
 
-Sashiko fixes these three problems with three small APIs.
+- **Boundary-aware Context helpers** — `Sashiko::Context.thread`,
+  `.fiber`, `.parallel_map` preserve the OTel Context across Ruby's
+  in-process concurrency primitives. `Sashiko::Context.carrier` returns
+  a deep-frozen, Ractor-shareable Hash of W3C Trace Context headers
+  that survives Sidekiq job args, Kafka message attributes, HTTP
+  headers, and `Ractor.new(...)` arguments — `Sashiko::Context.attach`
+  reconnects the trace on the other side.
+- **Declarative span DSL** — `extend Sashiko::Traced; trace :method`
+  instead of `tracer.in_span { ... }` blocks. Exceptions and error
+  status are recorded automatically.
+- **Spans from inside a Ractor** — vanilla OTel Ruby raises
+  `Ractor::IsolationError` on `tracer.in_span` inside a Ractor.
+  Sashiko records the work as plain `SpanEvent` data inside the
+  Ractor and *replays* it as real OTel spans on the main Ractor,
+  with the original timestamps and parent linkage. Caveats below.
+- **Per-Box (per-tenant) instrumentation** — under `RUBY_BOX=1`, each
+  `Sashiko::Box.new` gets its own Sashiko and OTel SDK. Useful for
+  multi-tenant processes; see the Box section for known constraints.
+- **Tracer DI everywhere** — every public entry point accepts a
+  `tracer:` keyword that bypasses the global memoized tracer. The
+  recommended escape hatch for routing spans through a non-default
+  provider (Box-local, alt backend, test fixture).
+- **Typed** — ships RBS signatures, type-checked with Steep in CI.
 
-## Built for Ruby 4
+Sashiko is intended as a **companion** to the SIG-maintained
+`opentelemetry-instrumentation-*` gems, not a replacement. Use those
+for Rails / Sidekiq / Faraday / etc.; reach for Sashiko for the
+custom-code parts and the boundary handoffs they don't cover.
 
-Sashiko is designed from the ground up with Ruby 4's modern toolbox.
-Each idiom is applied where it genuinely clarifies the code.
+## Requirements
 
-### The 4.0-exclusive headliners
+- Ruby 4.0 or later (4.0.0 shipped 2025-12-25)
+- `opentelemetry-api` `~> 1.4`
+- `opentelemetry-sdk` `~> 1.5`
 
-| Ruby 4.0-new feature | Where it's used in Sashiko |
-|---|---|
-| **`Ractor::Port`** | `Sashiko::Ractor.parallel_map` — true parallel execution across cores using Ruby 4's new Port-based Ractor communication API. See `examples/ractor_demo.rb`. |
-| **`Ruby::Box`** (experimental) | `Sashiko::Box.new_with_sashiko` + `Sashiko::Adapters::Anthropic.instrument_in_box!` — multi-tenant observability. Each Box has its own Sashiko, its own OTel tracer provider, its own instrumented classes, its own exporter. Zero cross-contamination. Full test suite runs under `RUBY_BOX=1` in CI. See [`examples/box_multitenant_demo.rb`](examples/box_multitenant_demo.rb). |
-| **ZJIT-friendly design** | All instrumentation happens at class load time via `Module#prepend`; no runtime method rewrites, no `method_added` hooks, no dynamic `define_method` at call time. Inline caches stay warm. |
-| **Ractor 4.0 new API (`Port`, `#value`)** | Used directly rather than the deprecated `.take` / `Ractor.yield` style. |
-
-### Modern-Ruby idioms matured for 4.0
-
-| Feature | Where in Sashiko |
-|---|---|
-| `Data.define` immutable values | `Sashiko::Traced::Options`, `Sashiko::Adapters::Anthropic::Price` — frozen, typed, Ractor-shareable by default |
-| Pattern matching (`in` / deconstruct) | Attribute extraction in `Traced`, response parsing in Anthropic adapter, HTTP status classification in Faraday adapter |
-| Endless methods (`def foo = …`) | Public accessors and one-line delegates throughout |
-| `it` default block parameter | Filter/reject chains in `trace_all` |
-| `Ractor.make_shareable` | `Sashiko::Context.carrier` returns a deep-frozen, Ractor-shareable Hash — one of the few things you can cleanly hand to a Ractor |
-| Anonymous block forwarding (`&`) | `Sashiko::Context.with` / `#attach` delegate blocks with no named parameter |
-| RBS signatures | Ship `sig/sashiko.rbs` for Steep users |
-| Line-start logical operators | Language supports it; this codebase has no multi-line boolean conditions warranting it. Not forced in. |
-
-### A look at the code
-
-Attribute sources resolved with pattern matching (replaces the traditional
-`respond_to?` chain):
-
-```ruby
-extra = case options.attributes
-        in Proc => fn then fn.arity.zero? ? fn.call : fn.call(*args, **kwargs)
-        in Hash => h  then h
-        else nil
-        end
-```
-
-Faraday adapter classifying HTTP status codes:
-
-```ruby
-case response.status
-in 100..399     # ok, no-op
-in Integer => code
-  span.status = OpenTelemetry::Trace::Status.error("HTTP #{code}")
-end
-```
-
-Ruby 4's `Ractor::Port` driving true CPU-parallel fanout:
-
-```ruby
-def parallel_map(items, via:)
-  # ... shareability checks ...
-  ports = items.each_with_index.map do |item, i|
-    port = ::Ractor::Port.new
-    ::Ractor.new(port, receiver, method_name, item, i, carrier) do |p, r, m, it, idx, _c|
-      p.send([idx, r.public_send(m, it)])
-    end
-    port
-  end
-  # collect in input order...
-end
-```
+`Ruby::Box` and `Ractor::Port`-backed features need Ruby 4.0+. Box is
+opt-in via `RUBY_BOX=1` and is flagged experimental upstream — see
+[Misc #21681](https://bugs.ruby-lang.org/issues/21681).
+The Thread, Fiber, queue, and HTTP boundary helpers work on any Ruby
+3.x tested release, but the gem currently targets 4.0+ only because
+adapters use `Data.define` and other 3.2+ idioms.
 
 ## Quick start
 
@@ -219,9 +119,9 @@ class OrderService
 end
 ```
 
-Every call to `checkout` now produces a span named `OrderService#checkout`,
+Every call to `checkout` produces a span named `OrderService#checkout`,
 with `charge` and `notify` as children. Exceptions are recorded and the
-span is marked as errored automatically.
+span is marked errored automatically.
 
 ## Core API
 
@@ -242,9 +142,12 @@ end
 `trace` options:
 - `name:` — override the span name (defaults to `ClassName#method`).
 - `kind:` — `:internal` (default), `:client`, `:server`, etc.
-- `attributes:` — a `Proc` receiving the call arguments, or a static
-  `Hash`. Pattern-matched against `Proc` / `Hash` shapes internally.
+- `attributes:` — a `Proc` receiving call args, or a static `Hash`.
 - `record_args: true` — include arg count as `code.args.count`.
+
+Implementation: one anonymous module is `prepend`ed per target class at
+trace time; subsequent `trace` calls redefine methods on the same overlay,
+keeping `super` chains intact.
 
 ### `Sashiko::Context` — propagation across Thread / Fiber
 
@@ -261,12 +164,33 @@ results = Sashiko::Context.parallel_map(jobs) { |j| process(j) }
 ```
 
 Without these helpers, plain `Thread.new` drops the OTel Context and
-your spans become orphans. Sashiko makes the connection explicit.
+your spans become orphans.
 
-### `Sashiko::Ractor` — true parallel execution with span replay (Ruby 4)
+### `Sashiko::Context.carrier` — across processes, queues, Ractors
 
-For CPU-bound work that should actually use multiple cores, not just
-share the GVL between threads:
+The same primitive works for any boundary where you can pass strings:
+
+```ruby
+# Producer side: capture the current trace context as a serializable Hash.
+queue.push(payload: "...", trace_context: Sashiko::Context.carrier)
+
+# Worker side: re-attach it before doing traced work.
+job = queue.pop
+Sashiko::Context.attach(job[:trace_context]) do
+  process(job)
+end
+```
+
+`carrier` is a deep-frozen, `Ractor`-shareable Hash of W3C Trace Context
+headers (`traceparent`, `tracestate`). It survives JSON serialization,
+Sidekiq job args, Kafka message attributes, HTTP headers, and
+`Ractor.new(...)` arguments.
+
+![Carrier propagation across Web → Sidekiq → external API](docs/assets/carrier_propagation.svg)
+
+### `Sashiko::Ractor` — parallel execution with span replay
+
+For CPU-bound work that should actually use multiple cores:
 
 ```ruby
 module PrimePipeline
@@ -282,60 +206,133 @@ Sashiko.tracer.in_span("main.batch") do
 end
 ```
 
-**What happens under the hood:**
+How it works:
 
 1. Each item runs in its own Ractor (true parallelism, no GVL).
 2. Inside each Ractor, `Sashiko::Ractor.span(...)` records a frozen
-   `SpanEvent` (name, start/end time, attributes, parent event id)
-   — *no OTel calls, because those don't work inside a Ractor*.
+   `SpanEvent` (name, start/end ns, attributes, parent event id) — *no
+   OTel calls, because those don't work inside a Ractor*.
 3. When the Ractor finishes, the batch of events is sent back via
    `Ractor::Port` to the main Ractor.
-4. A `Sashiko::Ractor::Sink` on the main side replays each event as a
-   real OTel span with `tracer.start_span(..., start_timestamp: …)`
-   and `span.finish(end_timestamp: …)`, rebuilding the parent chain
-   from the recorded event ids, all under the context of the span
-   that wrapped the `parallel_map` call.
+4. A `Sashiko::Ractor::Sink` on the main side calls
+   `tracer.start_span(..., start_timestamp: …)` /
+   `span.finish(end_timestamp: …)` for each event, rebuilding the parent
+   chain from the recorded event ids, all under the context of the span
+   that wrapped `parallel_map`.
 
-The resulting trace tree is indistinguishable from one where the
-spans were emitted in-process — except the actual work happened on
-separate cores.
+Resulting tree:
 
-**Constraints:**
-- `via:` must be a `Method` whose receiver is Ractor-shareable
-  (a `Module` or frozen class).
-- Nested spans inside the Ractor must use `Sashiko::Ractor.span`
-  (not `tracer.in_span`, which would crash inside a Ractor).
-
-### Carrier-based propagation — across processes, queues, Ractors
-
-The same primitive works for any boundary where you can pass strings:
-
-```ruby
-# Producer side: capture current trace context as a serializable Hash.
-queue.push(
-  payload: "...",
-  trace_context: Sashiko::Context.carrier,
-)
-
-# Worker side: re-attach it before doing traced work.
-job = queue.pop
-Sashiko::Context.attach(job[:trace_context]) do
-  process(job)
-end
+```
+main.batch (20ms)                              ← main Ractor
+├─ PrimePipeline.run (7.5ms) [item.index=0]    ← recorded inside a Ractor
+│  ├─ enumerate                                ← ← nested Ractor-side span
+│  ├─ sieve
+│  └─ summarize
+├─ PrimePipeline.run (13.5ms) [item.index=1]
+│  └─ ...
+└─ PrimePipeline.run (19.7ms) [item.index=2]
+   └─ ...
 ```
 
-`carrier` is a deep-frozen `Ractor`-shareable hash of W3C Trace Context
-headers (`traceparent`, `tracestate`). It survives JSON serialization,
-Sidekiq job args, Kafka message attributes, HTTP headers, **and
-`Ractor.new(...)` arguments**. The worker's spans end up in the same
-distributed trace as the producer's.
+![Ractor span replay sequence](docs/assets/ractor_span_replay.svg)
 
-![Carrier propagation across Web → Sidekiq → external API](docs/assets/carrier_propagation.svg)
+```sh
+bundle exec ruby examples/ractor_span_replay_demo.rb
+```
 
-## Adapters (optional)
+**Caveats — what "replay" does and doesn't preserve:**
 
-Adapters are not loaded by default — require them explicitly. Adapters
-are intentionally thin; the core gem has zero vendor-specific code.
+- `trace_id` / `span_id` are assigned by the **main-side** tracer at
+  replay time; the Ractor never sees a real `SpanContext`. Parent linkage
+  inside the replayed batch is correct, and the batch's root attaches to
+  whatever main-side context wrapped `parallel_map`.
+- `OpenTelemetry::Baggage` set inside the Ractor is **not** propagated
+  out; only what's in `Sashiko::Context.carrier` at `parallel_map` time
+  reaches the replay.
+- Sampling is decided at replay time on the main side, not when the work
+  actually ran.
+- Constraints: `via:` must be a `Method` whose receiver is
+  Ractor-shareable (a `Module` or frozen class). Nested spans inside the
+  Ractor must use `Sashiko::Ractor.span` — `tracer.in_span` would crash.
+
+For threads, prefer `Sashiko::Context.thread` / `parallel_map` — Ractor
+replay is for genuine multi-core CPU work.
+
+### `Sashiko::Box` — per-Box instrumentation (Ruby 4, experimental)
+
+Vanilla `Module#prepend`-based instrumentation is process-global: once
+you patch `Anthropic::Messages` for tenant A, tenant B inherits the
+patch. `Ruby::Box` provides a separate loading namespace, so each Box
+can have its own instrumented classes, OTel tracer provider, and exporter.
+
+```ruby
+# Run with: RUBY_BOX=1 bundle exec ruby your_script.rb
+
+tenant_a = Sashiko::Box.new
+tenant_a.eval(<<~RUBY)
+  OpenTelemetry::SDK.configure { |c| c.service_name = "tenant-a" }
+  # ... tenant-a's business code + instrumentation ...
+RUBY
+
+tenant_b = Sashiko::Box.new
+tenant_b.eval(<<~RUBY)
+  OpenTelemetry::SDK.configure { |c| c.service_name = "tenant-b" }
+RUBY
+```
+
+`Sashiko::Box.new` creates a `Ruby::Box` with Sashiko already required
+inside. It raises `NotEnabledError` if the process wasn't started with
+`RUBY_BOX=1`. For a bare box without Sashiko, use `Ruby::Box.new`
+directly.
+
+> **Inside a Box, pass a `tracer:` explicitly.** Ruby::Box does not
+> isolate the OpenTelemetry module's state, so `Sashiko.tracer` is
+> memoized to main's tracer to keep main predictable. Every place
+> Sashiko emits a span accepts an explicit `tracer:` that bypasses the
+> default lookup:
+>
+> ```ruby
+> tracer = OpenTelemetry.tracer_provider.tracer("my-component")
+>
+> # Per-method
+> trace :foo, tracer: tracer
+>
+> # Or every method
+> trace_all matching: /^handle_/, tracer: tracer
+>
+> # Adapters
+> f.use Sashiko::Adapters::Faraday::Middleware, tracer: tracer
+> Sashiko::Adapters::Anthropic.instrument!(Anthropic::Messages, tracer: tracer)
+>
+> # Ractor
+> Sashiko::Ractor.parallel_map(items, via: M.method(:run), tracer: tracer)
+> ```
+>
+> `Sashiko::Adapters::Anthropic.instrument_in_box!` does this binding
+> for you automatically when called with a Box.
+
+![Box multi-tenant isolation](docs/assets/box_multitenant.svg)
+
+For instrumenting a specific class only inside a box:
+
+```ruby
+box = Sashiko::Box.new
+box.eval('require "anthropic"')
+Sashiko::Adapters::Anthropic.instrument_in_box!(box, "Anthropic::Messages")
+```
+
+Caveats: `Ruby::Box` is experimental in Ruby 4.0. Known upstream issues
+include native-extension loading, `bundler/inline`, and parts of
+`active_support` failing under Box. See
+[Misc #21681](https://bugs.ruby-lang.org/issues/21681) for the roadmap.
+
+See [`examples/box_multitenant_demo.rb`](examples/box_multitenant_demo.rb)
+for a runnable demo.
+
+## Adapters
+
+Adapters are not loaded by default — require them explicitly. The core
+gem has zero vendor-specific code.
 
 ### Faraday
 
@@ -347,10 +344,12 @@ conn = Faraday.new("https://api.example.com") do |f|
 end
 ```
 
-Produces client-kind spans named `HTTP GET` / `HTTP POST` etc., with
-HTTP semantic convention attributes.
+Produces client-kind spans named after the HTTP method (`GET`, `POST`,
+etc.) per OTel HTTP semantic conventions, with the standard request /
+response attributes (`http.request.method`, `url.full`, `server.address`,
+`server.port`, `http.response.status_code`, `error.type`).
 
-### Anthropic
+### Anthropic (optional, may move to a separate gem)
 
 ```ruby
 require "sashiko/adapters/anthropic"
@@ -358,109 +357,20 @@ require "sashiko/adapters/anthropic"
 Sashiko::Adapters::Anthropic.instrument!(Anthropic::Messages)
 ```
 
-Produces GenAI-semantic-convention spans on every `messages.create` call,
-including token counts, cache hit ratio, and estimated USD cost. Pricing
-is stored as a frozen `Data.define(Price)` value, deep-frozen with
-`Ractor.make_shareable` at load time; override via
-`Sashiko::Adapters::Anthropic.pricing =`.
+Produces GenAI semantic-convention spans on every `messages.create` call,
+including token counts, cache hit ratio, and an estimated USD cost.
+Pricing is a frozen `Data.define(Price)` value, deep-frozen at load time;
+override via `Sashiko::Adapters::Anthropic.pricing =`.
 
-> The Anthropic adapter is intentionally thin. Model names, pricing,
-> and the GenAI spec are still moving targets — treat this adapter as
-> a convenience, not a stable contract.
-
-### `Sashiko::Box` — multi-tenant observability (Ruby 4)
-
-Ruby 4.0 finally shipped `Ruby::Box` after years of discussion. It's
-the other headliner alongside Ractor, and Sashiko leans into it for
-one of the hardest problems in Ruby observability: **multi-tenancy
-inside a single process**.
-
-Because Sashiko (and OTel itself) relies on `Module#prepend`, vanilla
-instrumentation is process-global — once you patch `Anthropic::Messages`
-for tenant A, tenant B inherits the patch too. Box breaks that
-assumption: requires, class definitions, OTel SDKs, and Sashiko itself
-live independently inside each Box.
-
-![Box multi-tenant isolation](docs/assets/box_multitenant.svg)
-
-```ruby
-# Enable with: RUBY_BOX=1 bundle exec ruby your_script.rb
-
-# Two tenants, two OTel exporters, two instrumented class lineages
-tenant_a = Sashiko::Box.new_with_sashiko
-tenant_a.eval(<<~RUBY)
-  OpenTelemetry::SDK.configure { |c| c.service_name = "tenant-a" }
-  # ... tenant-a's business code + instrumentation ...
-RUBY
-
-tenant_b = Sashiko::Box.new_with_sashiko
-tenant_b.eval(<<~RUBY)
-  OpenTelemetry::SDK.configure { |c| c.service_name = "tenant-b" }
-  # ... tenant-b's business code + instrumentation ...
-RUBY
-```
-
-What you get:
-
-| Without Box | With Box |
-|---|---|
-| One global instrumented `Anthropic::Messages` | Each tenant has its own |
-| One OTel tracer provider | Each tenant gets its own |
-| Monkey-patch leaks between tenants | Zero cross-contamination |
-| One exporter destination per process | Every tenant can target a different backend |
-
-See [`examples/box_multitenant_demo.rb`](examples/box_multitenant_demo.rb)
-for a full runnable example. Actual output from that demo:
-
-```
-After running both tenants:
-  tenant-A exporter: 4 span(s)    ← tenant-A data
-  tenant-B exporter: 4 span(s)    ← tenant-B data, zero overlap
-
-Isolation verification:
-  Main process sees Anthropic::Messages class? nil          ← main untouched
-  tenant-A saw Anthropic::Messages instrumented? true
-  tenant-B saw Anthropic::Messages instrumented? true
-  tenant-A response id visible to tenant-B? nil             ← boxes don't cross-see
-```
-
-#### Quick adapter isolation
-
-For the common case of "I only want to instrument a specific library
-inside a specific box," there's a shortcut:
-
-```ruby
-box = Ruby::Box.new
-box.require "anthropic"
-Sashiko::Adapters::Anthropic.instrument_in_box!(box, "Anthropic::Messages")
-
-# Main process's Anthropic::Messages (if any) remains unmodified.
-```
-
-## A note on Ractors
-
-Ruby 4's headline feature is Ractor becoming more viable. Sashiko is
-designed to cooperate with it fully:
-
-- `Sashiko::Context.carrier` returns a `Ractor.make_shareable`-d Hash,
-  handed to `Ractor.new(...)` directly.
-- `Data`-based config (Options, Price, SpanEvent) is Ractor-shareable.
-- `DEFAULT_PRICING` is deep-frozen via `Ractor.make_shareable`.
-- **Worker Ractors can "emit" spans** via the replay mechanism
-  described above — a Sashiko-first capability not available in
-  vanilla OpenTelemetry Ruby.
-
-The long-standing limitation (OTel module state carries unshareable
-instance variables) still applies: you can't call `tracer.in_span`
-directly inside a Ractor. Sashiko's workaround buys you the observability
-you need today, while keeping the same API surface when upstream OTel
-eventually catches up.
+> The Anthropic adapter is **outside Sashiko's core "concurrency-boundary
+> observability" scope** and is shipped here as a working reference.
+> It may be extracted into a `sashiko-anthropic` gem in a future release;
+> any move will be announced in the CHANGELOG with a deprecation notice.
+> Model names, pricing, and the GenAI semantic conventions are still
+> moving targets — treat this adapter as a convenience, not a stable
+> contract.
 
 ## Types
-
-Sashiko ships RBS signatures (`sig/sashiko.rbs` + `sig/external.rbs`) and
-a `Steepfile`. Type-checking is run as a CI job on every push — the gem
-isn't just "types on the side" but an actively verified typed library.
 
 ```sh
 bundle exec rake typecheck
@@ -484,25 +394,19 @@ end
 
 ## Examples
 
-- [`examples/demo.rb`](examples/demo.rb) — parallel jobs with preserved
-  parent-child span links across threads.
-- [`examples/queue_demo.rb`](examples/queue_demo.rb) — producer enqueues
-  jobs; workers on the other side continue the same distributed trace.
-- [`examples/ractor_demo.rb`](examples/ractor_demo.rb) — Ractor::Port-driven
-  CPU-parallel work under a single traced batch span.
-- [`examples/ractor_span_replay_demo.rb`](examples/ractor_span_replay_demo.rb) —
-  the world-first: each Ractor emits its own root + nested spans, all
-  reconstructed on the main side as one unified trace tree.
-- [`examples/box_multitenant_demo.rb`](examples/box_multitenant_demo.rb) —
-  two tenants share one Ruby process, each with its own Sashiko, OTel
-  provider, and exporter. Requires `RUBY_BOX=1`.
+The full list with one-line descriptions and a quick-reference shell
+block is in [`examples/README.md`](examples/README.md). Highlights:
 
-```sh
-bundle install
-bundle exec ruby examples/demo.rb
-bundle exec ruby examples/queue_demo.rb
-bundle exec ruby examples/ractor_demo.rb
-```
+- [`examples/thread_fanout_demo.rb`](examples/thread_fanout_demo.rb) —
+  before/after of `Thread.new` losing OTel context vs.
+  `Sashiko::Context.parallel_map` keeping it. *Start here.*
+- [`examples/queue_demo.rb`](examples/queue_demo.rb) — producer enqueues
+  jobs; workers continue the same distributed trace.
+- [`examples/ractor_span_replay_demo.rb`](examples/ractor_span_replay_demo.rb)
+  — each Ractor records nested spans; the main side reconstructs them as
+  one trace tree.
+- [`examples/box_multitenant_demo.rb`](examples/box_multitenant_demo.rb)
+  — two tenants share one Ruby process. Requires `RUBY_BOX=1`.
 
 ## Development
 
@@ -512,15 +416,35 @@ bundle exec rake test    # run tests
 bundle exec rake docs    # generate RDoc to doc/
 ```
 
-## Requirements
+## Appendix: Ruby version targeting
 
-- Ruby 4.0 or later
-- `opentelemetry-api` `~> 1.4`
-- `opentelemetry-sdk` `~> 1.5`
+Sashiko targets Ruby 4.0+ today. The boundary helpers
+(`Context.thread/fiber/parallel_map/carrier/attach`) and the
+`Traced` DSL would also work on Ruby 3.2+ — the floor is set by
+two specifically-4.0 capabilities and a handful of 3.x idioms used
+throughout the codebase.
 
-## Status
+Ruby 4.0-specific:
 
-Early. API may change. 32 tests (4 RUBY_BOX-gated), all passing under both modes.
+| Feature | Where in Sashiko |
+|---|---|
+| `Ractor::Port` | `Sashiko::Ractor.parallel_map` — Port-based result collection. |
+| `Ruby::Box` | `Sashiko::Box.new` and `Sashiko::Adapters::Anthropic.instrument_in_box!` — per-Box instrumentation. Tests run in both default and `RUBY_BOX=1` modes in CI. |
+
+Ruby 3.x idioms applied where they help:
+
+| Feature | Where in Sashiko |
+|---|---|
+| `Data.define` (3.2+) | `Sashiko::Traced::Options`, `Adapters::Anthropic::Price`, `Ractor::SpanEvent` — frozen, Ractor-shareable values. |
+| Pattern matching (3.0+) | Attribute extraction in `Traced`, HTTP status classification in Faraday adapter, GenAI response disjunction in Anthropic adapter. |
+| `Ractor.make_shareable` (3.0+) | `Sashiko::Context.carrier` returns a deep-frozen, Ractor-shareable Hash. `DEFAULT_PRICING` is shareable too. |
+| Endless methods (3.0+), anonymous block forwarding (3.1+) | Used in `lib/` where they remove a line without obscuring intent. |
+| `it` block param (3.4+) | Used in tests and examples; `lib/` keeps named block params for now since Steep does not yet recognize `it`. |
+| RBS + Steep | `sig/sashiko.rbs`, type-checked in CI. |
+
+Class-load-time `Module#prepend` is the only mechanism used for
+instrumentation; no `method_added` hooks, no runtime `define_method` at
+call time. Inline caches stay warm.
 
 ## License
 
