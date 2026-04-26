@@ -14,16 +14,19 @@ require_relative "sashiko/box"
 module Sashiko
   DEFAULT_TRACER_NAME = "sashiko" unless const_defined?(:DEFAULT_TRACER_NAME)
 
-  # Memoized to anchor `Sashiko.tracer` to the OpenTelemetry tracer
-  # provider that was current when first called — typically main's. We
-  # would prefer to resolve `OpenTelemetry.tracer_provider` on every call,
-  # but Ruby::Box does not isolate the OpenTelemetry module's state:
-  # `OpenTelemetry::SDK.configure` from inside a Box mutates the same
-  # `OpenTelemetry.tracer_provider` slot that main reads, so a
-  # late-resolving `Sashiko.tracer` would silently flip mid-process.
-  # Inside a Box, do not call `Sashiko.tracer` — use
-  # `OpenTelemetry.tracer_provider.tracer(...)` directly so the box's
-  # SDK is reached.
+  # The `respond_to?(:tracer)` guard prevents redefinition when sashiko
+  # is re-required inside a Ruby::Box. Without it, the box's
+  # re-evaluation of this file would re-run `class << self; def tracer`
+  # and rebind the method's constant resolution to the box's scope,
+  # which then surfaces in *main* as well (Sashiko is a shared module).
+  # With the guard, main's `Sashiko.tracer` keeps resolving against
+  # main's OpenTelemetry, and an explicit `tracer:` keyword (or a raw
+  # `OpenTelemetry.tracer_provider.tracer(...)` call) is the documented
+  # way to reach a Box-local tracer from within box code.
+  #
+  # Memoization is for performance: `OpenTelemetry.tracer_provider.tracer`
+  # is internally cached by (name, version), so this just avoids one
+  # extra method dispatch per `Sashiko.tracer` call.
   unless respond_to?(:tracer)
     class << self
       def tracer = @tracer ||= OpenTelemetry.tracer_provider.tracer(DEFAULT_TRACER_NAME, VERSION)

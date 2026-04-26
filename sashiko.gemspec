@@ -21,8 +21,8 @@ Gem::Specification.new do |spec|
   spec.files = Dir["lib/**/*.rb"] + Dir["sig/**/*.rbs"] + ["README.md", "CHANGELOG.md"]
   spec.require_paths = ["lib"]
 
+  spec.homepage = "https://github.com/O6lvl4/sashiko"
   spec.metadata = {
-    "homepage_uri"      => "https://github.com/O6lvl4/sashiko",
     "source_code_uri"   => "https://github.com/O6lvl4/sashiko",
     "changelog_uri"     => "https://github.com/O6lvl4/sashiko/blob/main/CHANGELOG.md",
     "documentation_uri" => "https://o6lvl4.github.io/sashiko/",

@@ -9,4 +9,6 @@ group :development do
   gem "faraday",  "~> 2.0"
   gem "steep",    ">= 2.0"
   gem "rbs",      ">= 4.0"
+  gem "benchmark-ips", "~> 2.14"
+  gem "benchmark"
 end
