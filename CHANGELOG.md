@@ -6,6 +6,50 @@ This project does not yet follow SemVer; the API is unstable until 1.0.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-26
+
+Rails companion: fills gaps left by the SIG-maintained
+`opentelemetry-instrumentation-rails` for the patterns Rails apps hit
+most often — `Thread.new` in controllers, ActiveJob trace continuity
+across queue backends, and bridging custom
+`ActiveSupport::Notifications` events into OTel spans.
+
+### Added
+- `lib/sashiko/rails.rb`: opt-in Rails integration module. None of the
+  helpers monkey-patch Rails internals.
+  - **`Sashiko::Rails.async(name, kind:, attributes:, tracer:) { ... }`**
+    — spawn a Thread that preserves the OTel Context, wrapped in a
+    span. Replacement for raw `Thread.new` inside controllers /
+    request handlers / jobs. Returns the Thread.
+  - **`Sashiko::Rails::TracedJob`** — module to include in
+    `ApplicationJob` (or any `ActiveJob::Base` subclass). Overrides
+    `serialize` to attach `Sashiko::Context.carrier`, `deserialize`
+    to extract it, and `around_perform` to attach it before invoking
+    the job body. Backend-agnostic: works against Sidekiq, GoodJob,
+    SolidQueue, AsyncJob, the test adapter, etc.
+  - **`Sashiko::Rails.bridge_notifications(pattern, tracer:)`** —
+    subscribe to an `ActiveSupport::Notifications` regex and emit one
+    OTel span per matched event. Span timestamps mirror the event's
+    actual start/finish; payload becomes span attributes (string
+    keys, primitive values pass through, others stringified).
+  - **`Sashiko::Rails.install!(notifications:, tracer:)`** — top-level
+    entry that delegates to `bridge_notifications` if a pattern is
+    given. Place in `config/initializers/sashiko.rb`.
+- `docs/rails_integration.md`: walkthrough with setup pattern,
+  per-helper examples, compatibility notes vs SIG instrumentation,
+  and "what this does NOT do" disclaimers.
+- New tests in `test/rails_test.rb` covering all four helpers — 12
+  assertions across async, bridge_notifications, TracedJob (serialize,
+  deserialize, perform inheritance, no-carrier fallback), and install!.
+
+### Changed
+- `Steepfile`: `lib/sashiko/rails.rb` is excluded from Steep's narrow
+  type checking. Adding RBS for ActiveSupport / ActiveJob is out of
+  scope for this gem; behavior is covered by `test/rails_test.rb`
+  instead.
+- Gemfile dev group adds `activesupport` and `activejob` (`>= 7.0`)
+  for the new test suite.
+
 ## [0.1.0] - 2026-04-26
 
 First public release on RubyGems. Headline: concurrency-boundary

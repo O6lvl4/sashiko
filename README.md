@@ -384,6 +384,28 @@ for a runnable demo.
 Adapters are not loaded by default — require them explicitly. The core
 gem has zero vendor-specific code.
 
+### Rails
+
+```ruby
+require "sashiko/rails"
+Sashiko::Rails.install!(notifications: /^my_app\./)
+```
+
+Rails companion that fills gaps left by SIG's
+`opentelemetry-instrumentation-rails`:
+
+- `Sashiko::Rails.async("name") { ... }` — spawn a Thread that
+  preserves OTel context (orphans-be-gone for `Thread.new` in
+  controllers).
+- `include Sashiko::Rails::TracedJob` in `ApplicationJob` — ride the
+  trace carrier across any ActiveJob backend (Sidekiq, GoodJob,
+  SolidQueue, etc.).
+- `Sashiko::Rails.bridge_notifications(/regex/)` — turn matching
+  `ActiveSupport::Notifications` events into OTel spans.
+
+Full walkthrough: [`docs/rails_integration.md`](docs/rails_integration.md).
+None of this monkey-patches Rails — pieces are independent and opt-in.
+
 ### Faraday
 
 ```ruby

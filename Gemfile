@@ -11,4 +11,6 @@ group :development do
   gem "rbs",      ">= 4.0"
   gem "benchmark-ips", "~> 2.14"
   gem "benchmark"
+  gem "activesupport", ">= 7.0"
+  gem "activejob", ">= 7.0"
 end
