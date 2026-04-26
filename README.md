@@ -70,6 +70,46 @@ Sashiko is intended as a **companion** to the SIG-maintained
 for Rails / Sidekiq / Faraday / etc.; reach for Sashiko for the
 custom-code parts and the boundary handoffs they don't cover.
 
+## When to use Sashiko
+
+OpenTelemetry has three signal types — *traces*, *metrics*, and
+*logs*. **Sashiko is tracing-only.** It does not emit metrics or
+logs, and it is not an analytics platform.
+
+✅ **Use Sashiko if you have:**
+
+- A Ruby backend (Rails / Sidekiq / Hanami / custom workers) using
+  OpenTelemetry, or planning to.
+- Code that spawns parallel work via `Thread` / `Fiber` / `parallel_map`
+  / `Ractor`, and you want the spans to stay connected to the parent
+  request.
+- Sidekiq / ActiveJob / Kafka / custom queue work where you want
+  the trace continuous across the queue boundary.
+- Ractor-based CPU-bound work that you want traced (vanilla OTel
+  raises `Ractor::IsolationError` when you try to emit spans from
+  inside a Ractor; Sashiko's span replay handles it).
+- Multi-tenant Ruby processes via `Ruby::Box` where each tenant
+  should get its own OTel pipeline.
+
+❌ **Don't use Sashiko for:**
+
+- **Web / mobile analytics** (page views, conversions, user
+  cohorts) — use Google Analytics, Mixpanel, Amplitude.
+  OpenTelemetry traces are not analytics events.
+- **Application metrics** (counters, gauges, histograms, real-time
+  dashboards) — use OpenTelemetry metrics + Prometheus / Grafana.
+- **Application logs** — use lograge / structured logging / OTel
+  logs. Sashiko does not handle logs.
+- **Frameworks that already have first-party OTel support** (Rails,
+  Sidekiq, Faraday, gRPC, …) — pick up the corresponding
+  `opentelemetry-instrumentation-*` SIG gem instead. Use Sashiko
+  for *your own code* that lives next to those frameworks.
+
+The shortest discriminator: if your question is **"why did this
+particular request take 3 seconds and where was the time spent"**,
+Sashiko is in scope. If your question is **"how many users converted
+last week"** or **"what is our p99 latency over time"**, it isn't.
+
 ## Requirements
 
 - Ruby 4.0 or later (4.0.0 shipped 2025-12-25)
